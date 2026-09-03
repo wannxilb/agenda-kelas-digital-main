@@ -1,0 +1,175 @@
+[
+  {
+    "verdict": "confirmed",
+    "title": "Predictable default passwords for imported users",
+    "description": "Bulk-imported student accounts are created with the shared password `password`, while bulk-imported teacher accounts are created with the shared password `password123`. Both flows also set `password_changed_at` to the import time. The login flow accepts non-email identifiers as the `nis` credential and email-format identifiers as `email`. An unauthenticated attacker who knows or guesses a student's NIS, or an imported teacher's email address such as the generated `<nip>@sekolah.sch.id`, can log in with the default password if the imported user has not manually changed it.",
+    "root_cause": "StudentsImport in app/Imports/StudentsImport.php and TeachersImport in app/Imports/TeachersImport.php do not generate unique one-time credentials or force first-login rotation, allowing account takeover of imported users with shared default passwords.",
+    "intended_behavior": "Bulk import should onboard student and teacher accounts without leaving any account usable with a shared known password; each imported user should receive a unique secret or be forced to set a password before gaining normal access.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "routes/web.php",
+        "line": 88,
+        "scope": "routes",
+        "description": "The admin route group exposes POST /admin/students/import to authenticated admin users when the import_data feature is enabled."
+      },
+      {
+        "kind": "propagation",
+        "file": "app/Http/Controllers/Admin/StudentController.php",
+        "line": 352,
+        "scope": "import",
+        "description": "The student import controller validates the uploaded spreadsheet and imports it with StudentsImport."
+      },
+      {
+        "kind": "propagation",
+        "file": "app/Imports/StudentsImport.php",
+        "line": 115,
+        "scope": "collection",
+        "description": "StudentsImport creates a hash for the literal shared password `password` before processing rows."
+      },
+      {
+        "kind": "propagation",
+        "file": "app/Imports/StudentsImport.php",
+        "line": 408,
+        "scope": "collection",
+        "description": "StudentsImport creates the user using the spreadsheet NIS and stores the shared default password hash, while setting password_changed_at to now."
+      },
+      {
+        "kind": "propagation",
+        "file": "routes/web.php",
+        "line": 99,
+        "scope": "routes",
+        "description": "The admin route group exposes POST /admin/teachers/import to authenticated admin users when the import_data feature is enabled."
+      },
+      {
+        "kind": "propagation",
+        "file": "app/Imports/TeachersImport.php",
+        "line": 120,
+        "scope": "collection",
+        "description": "TeachersImport creates new teacher users using the spreadsheet NIP, either the spreadsheet email or a generated <nip>@sekolah.sch.id email, and the literal shared password `password123`, while setting password_changed_at to now."
+      },
+      {
+        "kind": "sink",
+        "file": "app/Http/Controllers/Auth/LoginController.php",
+        "line": 68,
+        "scope": "login",
+        "description": "The login controller attempts authentication with the submitted identifier and password; non-email identifiers are mapped to the nis field and email-format identifiers are mapped to the email field, so imported student NIS values and imported teacher email values can be used with the shared default passwords."
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "data_state",
+        "description": "The target account must have been created through the student or teacher import flow and not manually changed its password afterward."
+      },
+      {
+        "kind": "system_configuration",
+        "description": "Login by NIS/NIP must be enabled; this is the default according to the login controller setting lookup."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "Unauthenticated internet or intranet user who knows or can guess a student's NIS or a teacher's NIP.",
+      "payloads": [
+        "POST /login with body: email=<student_nis>&password=password",
+        "POST /login with body: email=<teacher_email_or_nip@sekolah.sch.id>&password=password123"
+      ],
+      "instructions": [
+        "Obtain or guess a student NIS, or obtain/derive an imported teacher email address such as <nip>@sekolah.sch.id from the target institution.",
+        "Submit the login form using the identifier as the `email` field and the relevant shared default password.",
+        "If the account was imported and unchanged, follow the role redirect into the authenticated dashboard."
+      ],
+      "expected_result": "The attacker receives an authenticated session as the imported student or teacher account."
+    },
+    "remediation": {
+      "strategy": "Replace shared default passwords with unique one-time credentials and enforce first-login password rotation for imported users.",
+      "code_changes": [
+        {
+          "file_name": "app/Imports/StudentsImport.php",
+          "fixed_code": "Generate a per-user temporary password with Str::password(16), store only Hash::make($temporaryPassword), and set password_changed_at to null or a must_change_password flag."
+        },
+        {
+          "file_name": "app/Imports/TeachersImport.php",
+          "fixed_code": "Generate a per-user temporary password with Str::password(16), store only Hash::make($temporaryPassword), and set password_changed_at to null or a must_change_password flag."
+        },
+        {
+          "file_name": "app/Http/Controllers/Auth/LoginController.php",
+          "fixed_code": "After Auth::attempt, check the force-change marker and redirect to a password setup route before granting normal role dashboard access."
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "medium",
+        "reason": "The attack requires an imported account and knowledge of an identifier, but NIS/NIP values are commonly known or guessable in school environments."
+      },
+      "impact": {
+        "score": "medium",
+        "reason": "Successful exploitation gives full access to the targeted student or teacher account, but does not directly bypass into admin or platform-wide privileges."
+      },
+      "overall_severity": "medium"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "The import code, stored password values, login credential mapping, and lack of force-change enforcement were traced directly in source files."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "title": "Password reset reveals whether an email exists",
+    "description": "The public password reset endpoint returns a success response when Password::broker()->sendResetLink reports RESET_LINK_SENT and an error response otherwise. An unauthenticated attacker can submit candidate email addresses to distinguish registered accounts from unknown addresses.",
+    "root_cause": "sendResetLinkEmail in app/Http/Controllers/Auth/ForgotPasswordController.php does not return a uniform response for valid and invalid reset targets, allowing email account enumeration.",
+    "intended_behavior": "Password reset should not reveal whether a submitted email belongs to an account; user-facing responses should be identical for valid and invalid addresses.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "routes/web.php",
+        "line": 34,
+        "scope": "routes",
+        "description": "The public POST /forgot-password route calls ForgotPasswordController::sendResetLinkEmail without authentication."
+      },
+      {
+        "kind": "sink",
+        "file": "app/Http/Controllers/Auth/ForgotPasswordController.php",
+        "line": 25,
+        "scope": "sendResetLinkEmail",
+        "description": "The controller returns a success flash for RESET_LINK_SENT and an error response for other broker statuses."
+      }
+    ],
+    "conditions": [],
+    "execution": {
+      "attacker_perspective": "Unauthenticated user probing whether target email addresses are registered.",
+      "payloads": [
+        "POST /forgot-password with body: email=victim@example.com",
+        "POST /forgot-password with body: email=random-nonexistent@example.com"
+      ],
+      "instructions": [
+        "Submit the password reset form with a candidate email address.",
+        "Compare the response category: success indicates a registered address, while an error indicates an unregistered address."
+      ],
+      "expected_result": "The attacker can build a list of valid account email addresses."
+    },
+    "remediation": {
+      "strategy": "Always return the same user-facing message from the password reset request endpoint, regardless of broker status.",
+      "code_changes": [
+        {
+          "file_name": "app/Http/Controllers/Auth/ForgotPasswordController.php",
+          "fixed_code": "Call Password::broker()->sendResetLink($request->only('email')); then always return back()->with('success', __('If the address exists, a password reset link has been sent.'));"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "medium",
+        "reason": "The endpoint is public and the response difference is direct."
+      },
+      "impact": {
+        "score": "low",
+        "reason": "The issue reveals account existence only; it does not grant access without another attack."
+      },
+      "overall_severity": "low"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "The public route and divergent response branch were verified directly in source."
+    }
+  }
+]

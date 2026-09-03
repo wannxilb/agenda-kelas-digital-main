@@ -1,0 +1,180 @@
+/* stylelint-disable */
+/* resources/css/app.css */
+@import "tailwindcss";
+@import "tom-select/dist/css/tom-select.min.css";
+
+@layer base {
+    body {
+        @apply antialiased;
+    }
+}
+
+@layer components {
+    .skeleton {
+        background: linear-gradient(
+            90deg,
+            #f3f4f6 25%,
+            #e5e7eb 37%,
+            #f3f4f6 63%
+        );
+        background-size: 400% 100%;
+        animation: skeleton-shimmer 1.4s ease-in-out infinite;
+    }
+
+    @keyframes skeleton-shimmer {
+        0% {
+            background-position: 100% 0;
+        }
+        100% {
+            background-position: -100% 0;
+        }
+    }
+
+    .skeleton-screen {
+        background: #ffffff;
+        overflow: hidden;
+        position: fixed;
+        inset: 0;
+        transition: opacity 250ms ease;
+        z-index: 99995;
+    }
+
+    .skeleton-screen--done {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .network-toast {
+        background: #111827;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        box-shadow: 0 12px 32px rgba(17, 24, 39, 0.2);
+        color: #ffffff;
+        font-size: 12.5px;
+        font-weight: 700;
+        left: 50%;
+        letter-spacing: 0;
+        max-width: calc(100vw - 32px);
+        opacity: 0;
+        padding: 9px 16px;
+        pointer-events: none;
+        position: fixed;
+        top: max(14px, env(safe-area-inset-top, 0px));
+        transform: translateX(-50%) translateY(-16px);
+        transition:
+            opacity 220ms ease,
+            transform 220ms ease;
+        white-space: nowrap;
+        z-index: 99998;
+    }
+
+    .network-toast.is-shown {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+
+    .network-toast.is-online {
+        background: #065f46;
+        border-color: rgba(255, 255, 255, 0.14);
+    }
+
+    .btn-primary {
+        @apply bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors;
+    }
+
+    .btn-secondary {
+        @apply bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors;
+    }
+
+    .card {
+        @apply bg-white rounded-xl shadow-sm p-6;
+    }
+
+    /* Modern Custom Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        @apply bg-transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        @apply bg-gray-200 rounded-full transition-colors;
+    }
+
+    .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+        @apply bg-blue-200;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        @apply bg-blue-400;
+    }
+
+    /* Refined Table Styles */
+    .table-container {
+        @apply relative border border-gray-100 rounded-2xl overflow-hidden bg-white shadow-sm transition-all duration-300;
+    }
+
+    .table-header-glass {
+        @apply sticky top-0 z-20 bg-gray-50 border-b border-gray-100;
+    }
+
+    .table-row-hover {
+        @apply hover:bg-blue-50/30 transition-all duration-200;
+    }
+
+    .data-cell {
+        @apply px-6 py-4 text-sm text-gray-600;
+    }
+
+    /* Bottom nav safe area for notched devices */
+    .safe-bottom {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* TomSelect: single clean border */
+    .ts-wrapper {
+        overflow: visible;
+    }
+    .ts-wrapper.single .ts-control,
+    .ts-wrapper.multi .ts-control {
+        border-radius: 0.75rem !important;
+        padding: 0.625rem 1rem !important;
+        font-size: 0.875rem !important;
+        min-height: 42px !important;
+        border: 1px solid #e5e7eb !important;
+        box-shadow: none !important;
+        background: #f9fafb !important;
+    }
+    .ts-wrapper.single.focus .ts-control,
+    .ts-wrapper.multi.focus .ts-control {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
+        background: #fff !important;
+    }
+    .ts-wrapper .ts-dropdown {
+        border-radius: 0.75rem;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        z-index: 9999;
+    }
+    .ts-wrapper .ts-dropdown .option.active {
+        background: #eff6ff;
+        color: #2563eb;
+    }
+
+    /* Bottom sheet slide up animation */
+    @keyframes slideUp {
+        from {
+            transform: translateY(100%);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+    .animate-slide-up {
+        animation: slideUp 0.3s ease-out;
+    }
+}

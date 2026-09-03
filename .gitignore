@@ -1,0 +1,54 @@
+# Laravel-specific ignores
+*.key
+.env
+.env.local
+.env.*
+!.env.example
+!.env.e2e.example
+!.env.testing.example
+
+# Build and cache directories
+bootstrap/cache/
+storage/logs/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+vendor/
+
+# Compiled PHP files
+*.php~
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Coverage reports
+coverage/
+htmlcov/
+
+# Legacy build artifacts (if any)
+dist/
+build/
+target/
+
+# Playwright (E2E test)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Sensitive files
+backup.sql
+*.sql
+cloudflared.exe
+/public/**/*.php

@@ -1,0 +1,276 @@
+CHECKLIST TESTING ABSENSI HARIAN
+Tanggal testing: ____________________
+Tester: _____________________________
+Environment: Lokal / Staging / Produksi
+Browser/device: _____________________
+
+Format hasil:
+[ ] PASS   [ ] FAIL   [ ] BLOCKED
+Catatan: _________________________________________________
+
+============================================================
+1. DATA DAN KONFIGURASI AWAL
+============================================================
+
+[ ] 1.1 Pastikan database sudah memiliki:
+    - 1 akun admin
+    - 1 akun wali kelas
+    - 1 akun guru jam pertama
+    - 1 akun guru jam terakhir
+    - 2 akun siswa dalam kelas yang sama
+    - Nomor WhatsApp orang tua untuk minimal 1 siswa
+    - Jadwal pelajaran untuk kelas uji
+
+[ ] 1.2 Atur konfigurasi lokasi sekolah:
+    - Lokasi sekolah aktif
+    - Latitude dan longitude benar
+    - Radius pengujian, misalnya 100 meter
+
+[ ] 1.3 Atur waktu absensi masuk:
+    - Mulai absensi: 05:00
+    - Batas tepat waktu: 06:30
+    - Batas verifikasi wali kelas: 08:00
+
+[ ] 1.4 Atur waktu pulang:
+    - Pastikan jadwal pelajaran terakhir memiliki end_time
+    - Toleransi pulang: 10 menit
+
+[ ] 1.5 Pastikan data testing lama sudah dibersihkan atau gunakan tanggal testing khusus.
+
+============================================================
+2. AKSES BERDASARKAN ROLE
+============================================================
+
+[ ] 2.1 Siswa hanya dapat melihat absensinya sendiri.
+[ ] 2.2 Siswa tidak dapat membuka absensi siswa lain dengan mengganti ID URL.
+[ ] 2.3 Wali kelas hanya melihat siswa dari kelas binaannya.
+[ ] 2.4 Wali kelas tidak dapat memproses siswa dari kelas lain.
+[ ] 2.5 Guru melihat kelas yang relevan dengan jadwal mengajarnya.
+[ ] 2.6 Sekretaris dapat melihat dashboard/laporan sesuai hak akses.
+[ ] 2.7 Admin dapat melihat dan memproses pengajuan koreksi.
+[ ] 2.8 Pengguna tanpa login tidak dapat membuka halaman absensi.
+[ ] 2.9 Pengguna dengan role yang salah mendapat penolakan akses.
+
+============================================================
+3. ABSENSI MASUK: KAMERA DAN VALIDASI DASAR
+============================================================
+
+[ ] 3.1 Siswa membuka halaman Absensi Masuk/Pulang.
+[ ] 3.2 Kamera dapat dibuka setelah izin browser diberikan.
+[ ] 3.3 Kamera menggunakan kamera langsung, bukan file galeri.
+[ ] 3.4 Foto dapat diambil dan preview tampil.
+[ ] 3.5 Foto dapat diulang sebelum dikirim.
+[ ] 3.6 Form tidak dapat dikirim tanpa foto jika foto diwajibkan.
+[ ] 3.7 Lokasi GPS diminta saat form dikirim.
+[ ] 3.8 Form gagal jika izin lokasi ditolak saat geolocation aktif.
+[ ] 3.9 Waktu yang tersimpan adalah waktu server.
+[ ] 3.10 Mengirim ulang setelah sudah absen masuk ditolak sebagai duplikat.
+
+============================================================
+4. ABSENSI MASUK: ATURAN WAKTU
+============================================================
+
+[ ] 4.1 Sebelum 05:00: absensi ditolak.
+    Expected: tidak ada record absensi baru.
+
+[ ] 4.2 Pukul 05:00-06:30: status otomatis Tepat Waktu.
+[ ] 4.3 Pukul 06:31-08:00: status otomatis Terlambat.
+[ ] 4.4 Setelah 08:00: status Menunggu Verifikasi Wali Kelas.
+[ ] 4.5 Absensi setelah 08:00 tidak langsung dianggap terverifikasi.
+[ ] 4.6 Siswa tanpa absensi tampil sebagai Belum Konfirmasi Hadir.
+[ ] 4.7 Waktu pada perangkat yang salah tidak mengubah waktu server.
+
+============================================================
+5. ABSENSI MASUK: GEOLOCATION DAN RADIUS
+============================================================
+
+[ ] 5.1 Absensi dari dalam radius sekolah berhasil.
+[ ] 5.2 Absensi dari luar radius sekolah ditolak.
+[ ] 5.3 Latitude tersimpan.
+[ ] 5.4 Longitude tersimpan.
+[ ] 5.5 Akurasi GPS tersimpan.
+[ ] 5.6 Jarak dari titik sekolah tersimpan.
+[ ] 5.7 Koordinat diubah melalui request palsu tetap divalidasi server.
+[ ] 5.8 Jika konfigurasi lokasi belum lengkap, absensi ditolak dengan pesan jelas.
+
+============================================================
+6. VERIFIKASI MASUK OLEH WALI KELAS
+============================================================
+
+[ ] 6.1 Absensi setelah 08:00 muncul sebagai Menunggu Verifikasi.
+[ ] 6.2 Wali kelas dapat melihat foto, waktu, dan lokasi siswa.
+[ ] 6.3 Wali kelas dapat menyetujui absensi terlambat.
+[ ] 6.4 Setelah disetujui, status menjadi Dibantu/Disetujui Wali Kelas.
+[ ] 6.5 Wali kelas dapat menolak absensi.
+[ ] 6.6 Penolakan tanpa alasan tidak dapat dikirim.
+[ ] 6.7 Alasan penolakan tersimpan.
+[ ] 6.8 Koreksi/verifikasi dari kelas lain ditolak.
+
+============================================================
+7. BANTU ABSEN MASUK OLEH WALI KELAS
+============================================================
+
+[ ] 7.1 Siswa tanpa record memiliki tombol Bantu Absen.
+[ ] 7.2 Wali kelas wajib mengisi alasan.
+[ ] 7.3 Wali kelas wajib memberikan lokasi GPS.
+[ ] 7.4 Bantu Absen dari luar radius sekolah ditolak.
+[ ] 7.5 Waktu yang dicatat adalah waktu server.
+[ ] 7.6 Record menyimpan metode teacher_assisted.
+[ ] 7.7 Record menyimpan ID wali kelas dan waktu verifikasi.
+[ ] 7.8 Bantu Absen kedua untuk siswa yang sama ditolak.
+
+============================================================
+8. ABSENSI PULANG: JADWAL DAN TOLERANSI
+============================================================
+
+[ ] 8.1 Sistem memakai end_time pelajaran terakhir kelas pada hari tersebut.
+[ ] 8.2 Jadwal pulang berbeda antar kelas menghasilkan batas berbeda.
+[ ] 8.3 Hari dengan jadwal berbeda memakai jadwal hari tersebut.
+[ ] 8.4 Jika jadwal tidak ditemukan, sistem memakai jam pulang default.
+[ ] 8.5 Dalam batas toleransi, absensi pulang diterima sesuai aturan.
+[ ] 8.6 Sebelum batas toleransi tanpa izin, absensi ditolak.
+[ ] 8.7 Tidak ada record checkout yang dibuat ketika ditolak terlalu awal.
+[ ] 8.8 Foto dan lokasi tetap divalidasi pada checkout normal.
+[ ] 8.9 Checkout kedua pada hari yang sama ditolak sebagai duplikat.
+
+============================================================
+9. IZIN PULANG LEBIH AWAL
+============================================================
+
+[ ] 9.1 Siswa dapat mengajukan izin pulang lebih awal.
+[ ] 9.2 Kategori Dijemput untuk Izin tersedia.
+[ ] 9.3 Kategori Izin Lainnya tersedia.
+[ ] 9.4 Kategori Kegiatan Tambahan/Ekstrakurikuler tersedia.
+[ ] 9.5 Alasan wajib diisi.
+[ ] 9.6 Bukti tambahan dapat diunggah.
+[ ] 9.7 Pengajuan tampil pada monitor wali kelas.
+[ ] 9.8 Wali kelas dapat melihat alasan dan bukti.
+[ ] 9.9 Wali kelas dapat menyetujui pengajuan.
+[ ] 9.10 Wali kelas dapat menolak pengajuan dengan alasan wajib.
+[ ] 9.11 Pulang awal dengan izin menjadi early_with_permission.
+[ ] 9.12 Kegiatan tambahan menjadi additional_activity.
+[ ] 9.13 Pulang awal tanpa persetujuan tetap ditolak.
+[ ] 9.14 Pengajuan duplikat yang masih pending ditolak.
+
+============================================================
+10. BANTU ABSEN PULANG OLEH WALI KELAS
+============================================================
+
+[ ] 10.1 Siswa yang HP-nya mati dapat dibantu wali kelas.
+[ ] 10.2 Wali kelas wajib mengisi alasan bantuan.
+[ ] 10.3 Wali kelas wajib memberikan lokasi GPS.
+[ ] 10.4 Lokasi di luar radius sekolah ditolak.
+[ ] 10.5 Status menjadi teacher_assisted.
+[ ] 10.6 Identitas wali kelas dan waktu server tersimpan.
+[ ] 10.7 Bantu Pulang kedua untuk siswa yang sama ditolak.
+
+============================================================
+11. KOREKSI ABSENSI
+============================================================
+
+[ ] 11.1 Siswa dapat membuka form Ajukan Koreksi dari riwayat.
+[ ] 11.2 Siswa dapat memilih absensi masuk atau pulang.
+[ ] 11.3 Status Izin Kegiatan Sekolah tersedia.
+[ ] 11.4 Status Sakit tersedia.
+[ ] 11.5 Status Izin Lainnya tersedia.
+[ ] 11.6 Alasan koreksi wajib diisi.
+[ ] 11.7 Bukti foto/PDF dapat dilampirkan.
+[ ] 11.8 Koreksi untuk data absensi yang belum ada ditolak.
+[ ] 11.9 Pengajuan pending kedua untuk event yang sama ditolak.
+[ ] 11.10 Wali kelas dapat menyetujui koreksi.
+[ ] 11.11 Wali kelas dapat menolak koreksi dengan alasan.
+[ ] 11.12 Admin dapat melihat daftar pengajuan koreksi.
+[ ] 11.13 Admin dapat menyetujui/menolak koreksi.
+[ ] 11.14 Data absensi asli tidak berubah.
+[ ] 11.15 Status koreksi dan keputusan tetap terlihat.
+
+============================================================
+12. NOTIFIKASI WHATSAPP
+============================================================
+
+[ ] 12.1 Absensi normal yang valid mengirim notifikasi ke orang tua.
+[ ] 12.2 Absensi setelah 08:00 tidak mengirim sebelum disetujui wali kelas.
+[ ] 12.3 Absensi yang ditolak tidak mengirim notifikasi.
+[ ] 12.4 Foto gagal disimpan: tidak ada notifikasi.
+[ ] 12.5 Lokasi gagal: tidak ada notifikasi.
+[ ] 12.6 Absensi di luar radius: tidak ada notifikasi.
+[ ] 12.7 Checkout normal mengirim notifikasi pulang.
+[ ] 12.8 Checkout dengan izin mengirim notifikasi setelah tersimpan.
+[ ] 12.9 Log WhatsApp berstatus sent/failed terlihat.
+[ ] 12.10 Kegagalan Fonnte tidak menghapus data absensi.
+[ ] 12.11 Tombol retry mengirim ulang log yang sama.
+[ ] 12.12 Retry tidak membuat log duplikat.
+[ ] 12.13 Guru dan sekretaris tidak menerima WhatsApp individual untuk kondisi normal.
+
+============================================================
+13. PRIVASI DAN KEAMANAN MEDIA
+============================================================
+
+[ ] 13.1 File foto tidak berada di storage/app/public.
+[ ] 13.2 Foto baru tersimpan di disk privat.
+[ ] 13.3 Isi file foto terenkripsi.
+[ ] 13.4 URL /storage/student-attendances/... tidak dapat digunakan.
+[ ] 13.5 Siswa hanya dapat membuka foto miliknya sendiri.
+[ ] 13.6 Wali kelas hanya dapat membuka foto kelas binaannya.
+[ ] 13.7 Guru hanya dapat membuka foto kelas yang memiliki jadwalnya.
+[ ] 13.8 Admin/sekretaris hanya melihat dalam institusinya.
+[ ] 13.9 Pengguna tanpa hak mendapat HTTP 403.
+[ ] 13.10 Foto dibuka dengan Cache-Control private/no-store.
+[ ] 13.11 Tidak ada tombol download pada aplikasi.
+[ ] 13.12 Pembukaan foto tercatat di audit log.
+[ ] 13.13 Pembukaan bukti koreksi tercatat di audit log.
+[ ] 13.14 Pembukaan bukti izin pulang tercatat di audit log.
+[ ] 13.15 APP_KEY tidak berubah setelah media terenkripsi dibuat.
+[ ] 13.16 Backup storage privat tidak berada pada URL publik.
+
+============================================================
+14. MASA SIMPAN DAN PENGHAPUSAN
+============================================================
+
+[ ] 14.1 Command attendance:purge-media tersedia.
+[ ] 14.2 Jadwal purge berjalan setiap hari pukul 00:30.
+[ ] 14.3 Media lebih tua dari 365 hari dihapus.
+[ ] 14.4 Record absensi tetap ada setelah media dihapus.
+[ ] 14.5 Audit log tetap ada setelah media dihapus.
+[ ] 14.6 Bukti koreksi lama ikut dihapus sesuai masa simpan.
+
+============================================================
+15. SKENARIO GAGAL DAN PEMULIHAN
+============================================================
+
+[ ] 15.1 Izin kamera ditolak.
+[ ] 15.2 Browser tidak mendukung kamera.
+[ ] 15.3 Izin lokasi ditolak.
+[ ] 15.4 GPS timeout.
+[ ] 15.5 Lokasi tidak akurat.
+[ ] 15.6 Foto kosong.
+[ ] 15.7 Foto bukan format yang diizinkan.
+[ ] 15.8 Foto lebih besar dari 4 MB.
+[ ] 15.9 Storage foto gagal.
+[ ] 15.10 Database gagal.
+[ ] 15.11 Fonnte device disconnected.
+[ ] 15.12 Token Fonnte kosong.
+[ ] 15.13 Jaringan terputus saat submit.
+[ ] 15.14 Submit ulang tidak menggandakan absensi.
+[ ] 15.15 Submit ulang tidak menggandakan notifikasi.
+[ ] 15.16 HP siswa mati sebelum pulang dan wali kelas memakai Bantu Pulang.
+
+============================================================
+16. HASIL AKHIR
+============================================================
+
+Total PASS: ______
+Total FAIL: ______
+Total BLOCKED: ___
+
+Bug penting yang ditemukan:
+1. _______________________________________________________
+2. _______________________________________________________
+3. _______________________________________________________
+
+Catatan tambahan:
+__________________________________________________________
+__________________________________________________________
+
+Tester: ____________________    Tanggal: _________________
+Reviewer: __________________    Status: __________________
