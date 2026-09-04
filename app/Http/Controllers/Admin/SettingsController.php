@@ -55,6 +55,35 @@ class SettingsController extends Controller
                     }
                 }
             }],
+            'recurring_activities' => ['nullable', 'string', 'max:10000', function ($attribute, $value, $fail) {
+                if (! is_string($value) || trim($value) === '') {
+                    return;
+                }
+                $decoded = json_decode($value, true);
+                if (! is_array($decoded)) {
+                    $fail('Format kegiatan rutin tidak valid.');
+                    return;
+                }
+                $validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                foreach ($decoded as $i => $item) {
+                    if (empty($item['name']) || empty($item['start_time']) || empty($item['duration']) || empty($item['days'])) {
+                        $fail("Kegiatan rutin ke-" . ($i + 1) . " tidak lengkap.");
+                        return;
+                    }
+                    if (! preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $item['start_time'])) {
+                        $fail("Format jam kegiatan '{$item['name']}' tidak valid.");
+                        return;
+                    }
+                    if (! is_numeric($item['duration']) || $item['duration'] < 5 || $item['duration'] > 240) {
+                        $fail("Durasi kegiatan '{$item['name']}' harus antara 5-240 menit.");
+                        return;
+                    }
+                    if (! is_array($item['days']) || count(array_diff($item['days'], $validDays)) > 0) {
+                        $fail("Hari kegiatan '{$item['name']}' tidak valid.");
+                        return;
+                    }
+                }
+            }],
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,svg|max:2048',
             'favicon' => 'nullable|image|mimes:jpg,jpeg,png,ico,svg|max:1024',
         ]);
@@ -65,12 +94,18 @@ class SettingsController extends Controller
             'operational_override_until', 'school_location_enabled',
             'school_location_latitude', 'school_location_longitude',
             'school_location_radius_meters', 'schedule_time_slots',
+            'recurring_activities',
         ]);
         $data['operational_days'] = implode(',', $request->operational_days);
         $data['school_location_enabled'] = $request->boolean('school_location_enabled') ? '1' : '0';
         if (array_key_exists('schedule_time_slots', $data)) {
             $lines = array_values(array_filter(array_map('trim', preg_split('/\r?\n/', (string) $data['schedule_time_slots']))));
             $data['schedule_time_slots'] = implode("\n", $lines);
+        }
+        if (array_key_exists('recurring_activities', $data)) {
+            $raw = trim((string) $data['recurring_activities']);
+            $decoded = json_decode($raw, true);
+            $data['recurring_activities'] = is_array($decoded) ? json_encode($decoded) : '[]';
         }
 
         foreach ($data as $key => $value) {

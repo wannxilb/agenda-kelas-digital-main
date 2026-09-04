@@ -99,6 +99,13 @@ class SchedulesImport implements ToCollection
             $roomRaw     = trim((string) ($rowArray[$cols['room']       ?? -1] ?? ''));
 
             if (empty($className) || empty($subjectName) || empty($dayRaw) || empty($startRaw) || empty($endRaw)) {
+                $missing = [];
+                if (empty($className))   $missing[] = 'kelas';
+                if (empty($subjectName)) $missing[] = 'mapel';
+                if (empty($dayRaw))      $missing[] = 'hari';
+                if (empty($startRaw))    $missing[] = 'jam mulai';
+                if (empty($endRaw))      $missing[] = 'jam selesai';
+                $this->errors[] = 'Baris kosong/tidak lengkap (kurang: ' . implode(', ', $missing) . ')';
                 $this->skippedCount++;
                 continue;
             }
@@ -172,10 +179,8 @@ class SchedulesImport implements ToCollection
             $roomName = $roomRaw;
             if (!empty($roomRaw)) {
                 $room = Room::where('institution_id', $institutionId)
-                    ->where(function ($q) use ($roomRaw) {
-                        $q->where('name', 'like', '%' . $roomRaw . '%')
-                          ->orWhere('code', $roomRaw);
-                    })->first();
+                    ->where('name', 'like', '%' . $roomRaw . '%')
+                    ->first();
                 if ($room) {
                     $roomId   = $room->id;
                     $roomName = $room->name;
@@ -185,6 +190,7 @@ class SchedulesImport implements ToCollection
             // --- Check for duplicates ---
             $exists = Schedule::withoutGlobalScopes()
                 ->where('institution_id', $institutionId)
+                ->where('academic_year_id', $academicYear?->id)
                 ->where('class_id', $class->id)
                 ->where('subject_id', $subject->id)
                 ->where('teacher_id', $teacher->id)
@@ -195,6 +201,7 @@ class SchedulesImport implements ToCollection
                 ->exists();
 
             if ($exists) {
+                $this->errors[] = "Duplikat: {$class->name}, {$subjectName}, {$dayRaw} {$startTime}-{$endTime}";
                 $this->skippedCount++;
                 continue;
             }

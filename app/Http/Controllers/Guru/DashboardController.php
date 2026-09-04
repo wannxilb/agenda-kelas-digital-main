@@ -22,6 +22,11 @@ class DashboardController extends Controller
         $teacher = Auth::user();
         $today = now()->format('l');
 
+        $todayActivities = array_values(array_filter(
+            \App\Models\Setting::recurringActivities(),
+            fn ($act) => in_array($today, $act['days'] ?? [], true)
+        ));
+
         // Today's Teaching Schedule
         $todaySchedules = $teacher->teachingSchedules()
             ->where('day', $today)
@@ -86,6 +91,7 @@ class DashboardController extends Controller
         return view('guru.dashboard', [
             'teacher' => $teacher,
             'todaySchedules' => $todaySchedules,
+            'todayActivities' => $todayActivities,
             'homeroomClass' => $homeroomClass,
             'todayAttendance' => $todayAttendance,
             'totalAgendas' => $totalAgendas,

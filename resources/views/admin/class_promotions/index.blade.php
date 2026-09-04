@@ -967,13 +967,17 @@ function promotionApp(classes, teachers, activeYearId) {
             if (!this.gradeFilter) { this.promotions = []; return; }
             const validLevels = this.gradeFilter === 'ALL' ? ['X', 'XI'] : [this.gradeFilter];
             const srcClasses  = this.classes.filter(c => validLevels.includes(c.grade_level));
-            this.promotions = srcClasses.map(c => ({
-                source_class_id: c.id,
-                target_class_id: this.autoMapTargetClass(c),
-                new_homeroom_id: '',
-                student_ids: [],
-                selected: true,
-            }));
+            this.promotions = srcClasses.map(c => {
+                const students = c.students || [];
+                this.studentCache[c.id] = students.map(s => ({ id: s.id, name: s.name, nis: s.nis }));
+                return {
+                    source_class_id: c.id,
+                    target_class_id: this.autoMapTargetClass(c),
+                    new_homeroom_id: '',
+                    student_ids: students.map(s => s.id),
+                    selected: true,
+                };
+            });
             this.updateStep();
         },
 

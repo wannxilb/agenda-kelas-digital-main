@@ -396,14 +396,20 @@ class ScheduleController extends Controller
             $skipped  = $import->getSkippedCount();
             $errors   = $import->getErrors();
 
-            $msg = "Berhasil mengimpor {$imported} jadwal.";
+            $detail = '';
             if ($skipped > 0) {
-                $msg .= " {$skipped} baris dilewati.";
+                $detail .= " {$skipped} baris dilewati.";
             }
             if (!empty($errors)) {
-                return redirect()->back()->with('warning', $msg . ' Masalah: ' . implode('; ', array_slice($errors, 0, 3)));
+                $detail .= ' Masalah: ' . implode('; ', array_slice($errors, 0, 5));
             }
-            return redirect()->back()->with('success', $msg);
+
+            if ($imported > 0) {
+                return redirect()->back()->with('success', "Berhasil mengimpor {$imported} jadwal." . $detail);
+            }
+
+            $fallback = "Tidak ada jadwal yang berhasil diimpor." . $detail;
+            return redirect()->back()->with('error', $fallback);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal import jadwal: ' . $e->getMessage());
         }

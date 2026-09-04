@@ -5,7 +5,7 @@
 @section('header', 'Pengaturan Sistem')
 
 @section('content')
-<div class="max-w-4xl mx-auto pb-12">
+<div class="max-w-4xl mx-auto pb-12" x-data="settingsPage">
     <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="p-8">
             <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
@@ -20,6 +20,7 @@
 
             <form action="{{ route(Auth::user()->hasRole('super_admin') ? 'super-admin.settings.update' : 'admin.settings.update') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                 @csrf
+                <input type="hidden" id="recurring_activities_input" name="recurring_activities" :value="JSON.stringify(activities)">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="md:col-span-2">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">{{ __('Nama Sekolah') }}</label>
@@ -187,6 +188,54 @@
                         @error('schedule_time_slots') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
 
+                    <div class="md:col-span-2 mt-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <h3 class="text-sm font-bold text-gray-900">Kegiatan Rutin</h3>
+                                <p class="text-xs text-gray-500">Kegiatan yang otomatis muncul di jadwal pada hari-hari tertentu (misal: Senin & Jumat 45 menit).</p>
+                            </div>
+                            <button type="button" @click="openModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 transition-colors shadow-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                Tambah
+                            </button>
+                        </div>
+
+                        @error('recurring_activities') <p class="text-red-500 text-xs mb-2">{{ $message }}</p> @enderror
+
+                        <template x-if="activities.length === 0">
+                            <div class="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                                <svg class="w-10 h-10 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                <p class="text-xs text-gray-400">Belum ada kegiatan rutin</p>
+                            </div>
+                        </template>
+
+                        <div class="space-y-2">
+                            <template x-for="(act, idx) in activities" :key="act.id">
+                                <div class="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-bold text-gray-900" x-text="act.name"></p>
+                                            <p class="text-xs text-gray-500">
+                                                <span x-text="act.start_time"></span> · <span x-text="act.duration + ' menit'"></span> · <span x-text="act.days.map(d => dayLabel(d)).join(', ')"></span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <button type="button" @click="openModal(idx)" class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                        </button>
+                                        <button type="button" @click="removeActivity(idx)" class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
                     <div class="md:col-span-2 mt-6">
                         <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
                             <div class="p-2 bg-amber-50 text-amber-600 rounded-lg mr-3">
@@ -276,6 +325,57 @@
             </form>
         </div>
     </div>
+
+    {{-- Modal Kegiatan Rutin --}}
+    <div x-show="showModal" x-cloak class="fixed inset-0 z-[200] overflow-y-auto" x-transition.opacity>
+        <div class="flex items-center justify-center min-h-screen p-4 text-center">
+            <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" @click="showModal = false"></div>
+            <div class="relative w-full max-w-lg transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all">
+                <div class="bg-white px-6 pt-6 pb-4 border-b border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-900" x-text="editIndex === null ? 'Tambah Kegiatan Rutin' : 'Edit Kegiatan Rutin'"></h3>
+                </div>
+                <div class="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Kegiatan</label>
+                        <input type="text" x-model="form.name" placeholder="cth: Upacara Bendera / Senam Pagi"
+                               class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all text-sm font-medium">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Jam Mulai</label>
+                            <input type="time" x-model="form.start_time"
+                                   class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all text-sm font-medium">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Durasi (menit)</label>
+                            <select x-model="form.duration"
+                                    class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all text-sm font-medium">
+                                <template x-for="d in [15, 30, 45, 60, 90, 120]" :key="d">
+                                    <option :value="d" x-text="d + ' menit'"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Hari Pelaksanaan</label>
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="d in dayOptions" :key="d.value">
+                                <button type="button"
+                                        @click="toggleDay(d.value)"
+                                        class="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+                                        :class="form.days.includes(d.value) ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
+                                        x-text="d.label"></button>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2 border-t border-gray-100">
+                    <button type="button" @click="showModal = false" class="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-200 rounded-xl transition-colors">Batal</button>
+                    <button type="button" @click="saveActivity()" class="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm">Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 
@@ -307,6 +407,90 @@
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('alpine:init', function () {
+    Alpine.data('settingsPage', function () {
+        return {
+            activities: {!! json_encode(\App\Models\Setting::recurringActivities()) !!},
+            showModal: false,
+            editIndex: null,
+            form: { id: '', name: '', start_time: '07:00', duration: 45, days: [] },
+            dayOptions: [
+                { value: 'Monday', label: 'Senin' },
+                { value: 'Tuesday', label: 'Selasa' },
+                { value: 'Wednesday', label: 'Rabu' },
+                { value: 'Thursday', label: 'Kamis' },
+                { value: 'Friday', label: "Jum'at" },
+                { value: 'Saturday', label: 'Sabtu' }
+            ],
+            dayLabel(d) {
+                var m = { Monday: 'Senin', Tuesday: 'Selasa', Wednesday: 'Rabu', Thursday: 'Kamis', Friday: "Jum'at", Saturday: 'Sabtu' };
+                return m[d] || d;
+            },
+            openModal(index) {
+                if (index === null || index === undefined) {
+                    this.editIndex = null;
+                    this.form = { id: 'act_' + Date.now(), name: '', start_time: '07:00', duration: 45, days: [] };
+                } else {
+                    this.editIndex = index;
+                    var a = this.activities[index];
+                    this.form = { id: a.id, name: a.name, start_time: a.start_time, duration: a.duration, days: a.days.slice() };
+                }
+                this.showModal = true;
+            },
+            toggleDay(day) {
+                var i = this.form.days.indexOf(day);
+                if (i >= 0) {
+                    this.form.days.splice(i, 1);
+                } else {
+                    this.form.days.push(day);
+                }
+            },
+            saveActivity() {
+                if (!this.form.name || !this.form.start_time || this.form.days.length === 0) {
+                    Swal.fire('Error', 'Lengkapi nama, jam mulai, dan minimal satu hari.', 'error');
+                    return;
+                }
+                var clean = this.form.name.trim();
+                if (!clean) {
+                    Swal.fire('Error', 'Nama kegiatan wajib diisi.', 'error');
+                    return;
+                }
+                var payload = {
+                    id: this.form.id,
+                    name: clean,
+                    start_time: this.form.start_time,
+                    duration: parseInt(this.form.duration, 10),
+                    days: this.form.days.slice()
+                };
+                if (this.editIndex === null) {
+                    this.activities.push(payload);
+                } else {
+                    this.activities[this.editIndex] = payload;
+                }
+                this.showModal = false;
+            },
+            removeActivity(index) {
+                var self = this;
+                Swal.fire({
+                    title: 'Hapus Kegiatan?',
+                    text: 'Yakin ingin menghapus kegiatan "' + this.activities[index].name + '"?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Ya, Hapus!',
+                    cancelButtonText: 'Batal'
+                }).then(function (result) {
+                    if (result.isConfirmed) {
+                        self.activities.splice(index, 1);
+                    }
+                });
+            }
+        };
+    });
+});
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof L === 'undefined') return;

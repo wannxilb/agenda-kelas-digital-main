@@ -114,6 +114,7 @@
 // Time slots dari pengaturan "Jam Pelajaran" (setting schedule_time_slots)
                     $timeSlots = \App\Models\Setting::scheduleTimeSlots();
                         $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+                        $recurringActivities = \App\Models\Setting::recurringActivities();
                     @endphp
                     
                     <table class="min-w-full border-collapse border border-gray-100 rounded-xl overflow-hidden">
@@ -155,6 +156,23 @@
                                                 <div class="bg-blue-50/80 rounded-xl p-2.5 text-xs border border-blue-100 {{ $scheduleAtTime->id == $schedule->id ? 'ring-2 ring-blue-500 shadow-sm' : '' }}">
                                                     <p class="font-bold text-blue-900 leading-tight mb-1">{{ $scheduleAtTime->subject->name }}</p>
                                                     <p class="text-[10px] font-medium text-blue-600 line-clamp-1">{{ $scheduleAtTime->teacher->name }}</p>
+                                                </div>
+                                            @endif
+                                            @php
+                                                $activityAtTime = null;
+                                                if(is_array($recurringActivities)) {
+                                                    foreach($recurringActivities as $act) {
+                                                        if(in_array($day, $act['days'] ?? []) && ($act['start_time'] ?? null) == $slot['time']) {
+                                                            $activityAtTime = $act;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            @endphp
+                                            @if($activityAtTime)
+                                                <div class="bg-emerald-50 rounded-xl p-2.5 text-xs border border-emerald-200 mt-1">
+                                                    <p class="font-bold text-emerald-900 leading-tight mb-1">{{ $activityAtTime['name'] }}</p>
+                                                    <p class="text-[10px] font-medium text-emerald-600">{{ $activityAtTime['duration'] }} menit</p>
                                                 </div>
                                             @endif
                                         </td>

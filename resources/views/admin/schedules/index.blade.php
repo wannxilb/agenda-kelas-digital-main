@@ -14,28 +14,21 @@
         </div>
         <div class="flex flex-wrap items-center gap-2.5 sm:justify-end">
             {{-- Mode penjadwalan: Block vs Normal --}}
-            <div class="flex items-center gap-2 border border-gray-200 bg-white rounded-xl px-2 py-1 shadow-sm">
-                <span class="pl-1 pr-1 text-xs font-bold text-gray-400 uppercase tracking-wider hidden md:inline">Mode</span>
-                <div class="inline-flex rounded-lg bg-gray-100 p-1" id="schedule-mode-toggle">
-                    <button type="button" data-mode="block"
-                            onclick="setScheduleMode('block')"
-                            class="px-3.5 py-1.5 text-xs font-bold rounded-md transition-colors duration-100 active:scale-95 {{ $scheduleMode === 'block' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700' }} "
-                            title="Ganjil/genap bergantian per minggu">
-                        <span class="inline-flex items-center gap-1.5">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-                            Block
-                        </span>
-                    </button>
-                    <button type="button" data-mode="normal"
-                            onclick="setScheduleMode('normal')"
-                            class="px-3.5 py-1.5 text-xs font-bold rounded-md transition-colors duration-100 active:scale-95 {{ $scheduleMode === 'normal' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700' }} "
-                            title="Semua jadwal tampil tiap minggu">
-                        <span class="inline-flex items-center gap-1.5">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14"/></svg>
-                            Normal
-                        </span>
-                    </button>
-                </div>
+            <div id="schedule-mode-toggle" class="inline-flex items-center rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <button type="button" data-mode="block"
+                        onclick="setScheduleMode('block')"
+                        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold {{ $scheduleMode === 'block' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50' }}"
+                        title="Ganjil/genap bergantian per minggu">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    Block
+                </button>
+                <button type="button" data-mode="normal"
+                        onclick="setScheduleMode('normal')"
+                        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold {{ $scheduleMode === 'normal' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50' }}"
+                        title="Semua jadwal tampil tiap minggu">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14"/></svg>
+                    Normal
+                </button>
             </div>
             {{-- Impor & Ekspor group --}}
             <div class="inline-flex items-center rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden divide-x divide-gray-200">
@@ -306,7 +299,7 @@
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                                         </svg>
                                                     </a>
-                                                    <form action="{{ route('admin.schedules.destroy', $schedule) }}" method="POST" class="inline" onsubmit="return confirm('Yakin ingin menghapus jadwal ini?')">
+                                                    <form action="{{ route('admin.schedules.destroy', $schedule) }}" method="POST" class="inline" onsubmit="confirmDelete(event, this, 'Yakin ingin menghapus jadwal ini?')">
                                                         @csrf @method('DELETE')
                                                         <button type="submit" class="p-2.5 bg-white text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all border border-gray-200 hover:border-red-200 shadow-sm hover:shadow" title="Hapus">
                                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -347,6 +340,9 @@
                 
                 // Time slots dari pengaturan "Jam Pelajaran" (setting schedule_time_slots)
                 $timeSlots = \App\Models\Setting::scheduleTimeSlots();
+                
+                // Kegiatan rutin (contoh: Senin & Jumat 45 menit)
+                $recurringActivities = \App\Models\Setting::recurringActivities();
                 
                 $filteredSchedules = [];
                 if(isset($schedules) && $schedules->count() > 0) {
@@ -421,6 +417,16 @@
                                                                     $schedulesAtTime[] = $schedule; 
                                                                 }
                                                             }
+                                                            // Urutan tampil: ganjil dulu, lalu setiap minggu, lalu genap
+                                                            usort($schedulesAtTime, function($a, $b) {
+                                                                $prio = function($s) {
+                                                                    $w = $s->week_type;
+                                                                    if ($w == 'ganjil') return 1;
+                                                                    if ($w === null || $w === '' || $w === 'semua') return 2;
+                                                                    return 3; // genap
+                                                                };
+                                                                return $prio($a) <=> $prio($b);
+                                                            });
                                                         @endphp
                                                         
                                                         @foreach($schedulesAtTime as $schedule)
@@ -466,6 +472,30 @@
                                                                 </div>
                                                             </div>
                                                         @endforeach
+                                                        @php
+                                                            $activitiesAtTime = [];
+                                                            foreach($recurringActivities as $act) {
+                                                                if(in_array($dayKey, $act['days'] ?? []) && $act['start_time'] == $slot['time']) {
+                                                                    $activitiesAtTime[] = $act;
+                                                                }
+                                                            }
+                                                        @endphp
+                                                        @foreach($activitiesAtTime as $act)
+                                                            <div class="bg-emerald-50 rounded-xl p-3 mb-2 border border-emerald-200 hover:shadow-md transition-all">
+                                                                <div class="flex justify-between items-start mb-1">
+                                                                    <p class="font-bold text-emerald-900 text-xs leading-tight">{{ $act['name'] }}</p>
+                                                                </div>
+                                                                <p class="text-[10px] text-emerald-700 font-medium">
+                                                                    {{ $act['start_time'] }} · {{ $act['duration'] }} menit
+                                                                </p>
+                                                                <div class="mt-1.5">
+                                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-emerald-100 text-emerald-800 border-emerald-300">
+                                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                                                        Kegiatan Rutin
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        @endforeach
                                                     </td>
                                                 @endforeach
                                             @endif
@@ -503,29 +533,40 @@
         var icon = type === 'error'
             ? '<svg class="w-5 h-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
             : '<svg class="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
-        toast.className = 'fixed bottom-5 right-5 z-[200] flex items-start gap-3 max-w-sm w-full bg-white rounded-2xl shadow-2xl border border-gray-100 px-5 py-4 transition-all duration-300';
+        toast.className = 'fixed bottom-5 right-5 z-[200] flex items-start gap-3 max-w-sm w-full bg-white rounded-2xl shadow-2xl border border-gray-100 px-5 py-4';
+        toast.style.cssText = 'opacity:0; transform:translateX(120%); transition: all .35s cubic-bezier(.4,0,.2,1)';
         toast.innerHTML = icon +
             '<div class="flex-1 min-w-0">' + message + '</div>' +
-            '<button type="button" onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600 ml-1 flex-shrink-0">' +
+            '<button type="button" onclick="dismissToast()" class="text-gray-400 hover:text-gray-600 ml-1 flex-shrink-0">' +
             '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>';
         document.body.appendChild(toast);
 
-        setTimeout(function () {
-            if (toast.parentNode) toast.parentNode.removeChild(toast);
-        }, 4000);
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateX(0)';
+            });
+        });
+
+        toast._timer = setTimeout(dismissToast, 4000);
+    }
+
+    function dismissToast() {
+        var toast = document.getElementById('schedule-toast');
+        if (!toast) return;
+        clearTimeout(toast._timer);
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(120%)';
+        setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 350);
     }
 
     function applyScheduleModeActive(mode) {
+        var base = 'inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold';
         document.querySelectorAll('#schedule-mode-toggle button').forEach(function (btn) {
-            var active = btn.dataset.mode === mode;
-
-            btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
-            btn.classList.remove('text-gray-500', 'text-indigo-700', 'text-indigo-600', 'hover:text-gray-700');
-
-            if (active) {
-                btn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
+            if (btn.dataset.mode === mode) {
+                btn.className = base + ' bg-indigo-600 text-white';
             } else {
-                btn.classList.add('text-gray-500', 'hover:text-gray-700');
+                btn.className = base + ' text-gray-500 hover:text-gray-700 hover:bg-gray-50';
             }
         });
     }

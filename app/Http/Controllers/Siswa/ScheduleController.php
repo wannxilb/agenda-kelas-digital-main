@@ -25,6 +25,7 @@ class ScheduleController extends Controller
             return view('siswa.schedule.index', [
                 'days' => [],
                 'schedules' => [],
+                'recurringByDay' => [],
                 'weekRange' => '',
                 'weekTypeLabel' => null,
                 'currentDate' => Carbon::today()->format('Y-m-d'),
@@ -96,6 +97,8 @@ class ScheduleController extends Controller
             $this->annotateSchedulesForDate($schedules[$index], $teacherStatuses, $days[$index]['date_full']);
         }
 
+        $recurringByDay = $this->recurringByIndex($days, $dayMapping);
+
         $todayIndex = 0;
         foreach ($days as $i => $day) {
             if ($day['is_today']) {
@@ -107,12 +110,31 @@ class ScheduleController extends Controller
         return view('siswa.schedule.index', [
             'days' => $days,
             'schedules' => $schedules,
+            'recurringByDay' => $recurringByDay,
             'weekRange' => $weekRange,
             'weekTypeLabel' => \App\Models\Setting::scheduleMode() === 'block' ? ($this->weekTypesForDate($currentDate)[1] ?? null) : null,
             'currentDate' => $currentDate->format('Y-m-d'),
             'todayIndex' => $todayIndex,
             'noClass' => false,
         ]);
+    }
+
+    /**
+     * Memetakan kegiatan rutin (setting recurring_activities) ke index hari
+     * supaya mudah dirender di view jadwal harian siswa.
+     */
+    private function recurringByIndex(array $days, array $dayMapping): array
+    {
+        $activities = \App\Models\Setting::recurringActivities();
+
+        $result = [];
+        foreach ($dayMapping as $index => $englishDay) {
+            $result[$index] = array_values(array_filter($activities, function ($act) use ($englishDay) {
+                return in_array($englishDay, $act['days'] ?? [], true);
+            }));
+        }
+
+        return $result;
     }
 
     public function byDate(Request $request)

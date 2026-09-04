@@ -177,6 +177,38 @@ class Setting extends Model
     }
 
     /**
+     * Kegiatan rutin sekolah (misal: Senin & Jumat 45 menit).
+     * Disimpan sebagai JSON array di setting 'recurring_activities'.
+     *
+     * @return array<int, array{id: string, name: string, start_time: string, duration: int, days: string[]}>
+     */
+    public static function recurringActivities(): array
+    {
+        $raw = self::get('recurring_activities', null);
+
+        if (! is_string($raw) || trim($raw) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        return $decoded;
+    }
+
+    /**
+     * Nilai mentah recurring_activities untuk diisi ke hidden input.
+     */
+    public static function recurringActivitiesRaw(): string
+    {
+        $raw = self::get('recurring_activities', null);
+
+        return (is_string($raw) && trim($raw) !== '') ? $raw : '[]';
+    }
+
+    /**
      * Daftar week_type yang tampil pada tanggal tertentu.
      *
      * Mode 'normal' -> semua minggu ikut tampil (tidak bedakan ganjil/genap).

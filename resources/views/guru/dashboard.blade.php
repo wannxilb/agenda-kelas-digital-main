@@ -154,6 +154,23 @@
                 </div>
             </div>
             <div class="divide-y divide-gray-50">
+                @foreach($todayActivities ?? [] as $activity)
+                <div class="px-4 sm:px-5 py-3 sm:py-4 hover:bg-gray-50 transition-colors bg-emerald-50/40">
+                    <div class="flex items-center gap-3">
+                        <div class="flex-shrink-0 text-center w-12 sm:w-14">
+                            <p class="text-xs sm:text-sm font-bold text-emerald-600">{{ $activity['start_time'] }}</p>
+                            <p class="text-[10px] sm:text-xs text-emerald-400">{{ $activity['duration'] }}'</p>
+                        </div>
+                        <div class="w-px h-7 bg-emerald-200 flex-shrink-0"></div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-emerald-900 truncate">{{ $activity['name'] }}</p>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 mt-1">
+                                Kegiatan Rutin
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                @endforeach
                 @forelse($todaySchedules as $schedule)
                 <div class="px-4 sm:px-5 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
                     <div class="flex items-center gap-3">

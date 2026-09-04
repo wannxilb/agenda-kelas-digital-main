@@ -84,7 +84,7 @@
                         </div>
                         <div class="flex items-center mt-0.5">
                             <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none">
-                                {{ $daySchedules->count() > 0 ? $daySchedules->count() . ' Pelajaran' : 'Tidak ada jadwal' }}
+                                {{ ($daySchedules->count() + count($recurringByDay[$index] ?? [])) > 0 ? ($daySchedules->count() + count($recurringByDay[$index] ?? [])) . ' Kegiatan' : 'Tidak ada jadwal' }}
                             </p>
                         </div>
                     </div>
@@ -100,8 +100,40 @@
             {{-- Day Content --}}
             <div class="bg-gray-50/20">
 
-                @if($daySchedules->count() > 0)
+                @php
+                    $dayActivities = $recurringByDay[$index] ?? [];
+                @endphp
+
+                @if($daySchedules->count() > 0 || count($dayActivities) > 0)
                     <div class="divide-y divide-gray-100/50">
+                        @foreach($dayActivities as $activity)
+                        <div class="flex items-center gap-4 px-4 py-4 sm:px-7 hover:bg-white transition-all group relative bg-emerald-50/40">
+                            {{-- Time Indicator --}}
+                            <div class="flex flex-col items-center shrink-0 w-11 sm:w-14">
+                                <span class="text-[11px] sm:text-xs font-black text-emerald-600">{{ $activity['start_time'] }}</span>
+                                <div class="h-4 w-px bg-emerald-200 my-0.5"></div>
+                                <span class="text-[9px] font-bold text-emerald-400">{{ $activity['duration'] }}'</span>
+                            </div>
+
+                            {{-- Vertical Line --}}
+                            <div class="w-1 h-10 sm:h-12 rounded-full shrink-0 bg-emerald-500 shadow-sm shadow-emerald-500/10"></div>
+
+                            {{-- Info --}}
+                            <div class="flex-1 min-w-0">
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5 sm:gap-4">
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="text-xs sm:text-sm font-black text-emerald-900 truncate leading-tight">
+                                            {{ $activity['name'] }}
+                                        </h4>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 mt-1">
+                                            Kegiatan Rutin
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+
                         @foreach($daySchedules->sortBy('start_time') as $schedule)
                         @php
                             $teacherStatus = $schedule->teacherStatusForStudent;
