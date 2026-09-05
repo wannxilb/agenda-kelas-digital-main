@@ -48,11 +48,11 @@
                 </div>
                 <div class="flex items-center relative">
                     <div class="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-xl font-black border border-white/30 shadow-inner">
-                        {{ strtoupper(substr($teacher->name, 0, 1)) }}
+                        {{ strtoupper(substr($teacher['name'], 0, 1)) }}
                     </div>
                     <div class="ml-4 min-w-0">
-                        <h3 class="text-lg font-black truncate leading-tight">{{ $teacher->name }}</h3>
-                        <p class="text-indigo-100/80 text-[10px] font-bold uppercase tracking-widest mt-1">NIP: {{ $teacher->nip ?? '-' }}</p>
+                        <h3 class="text-lg font-black truncate leading-tight">{{ $teacher['name'] }}</h3>
+                        <p class="text-indigo-100/80 text-[10px] font-bold uppercase tracking-widest mt-1">NIP: {{ $teacher['nip'] ?? '-' }}</p>
                     </div>
                 </div>
             </div>
@@ -63,9 +63,9 @@
                 <div>
                     <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Mata Pelajaran</p>
                     <div class="flex flex-wrap gap-2">
-                        @forelse($teacher->subjects->take(3) as $subject)
+                        @forelse(array_slice($teacher['subjects'] ?? [], 0, 3) as $subject)
                             <span class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-xl text-[10px] font-black border border-indigo-100 uppercase tracking-wider">
-                                {{ $subject->name }}
+                                {{ $subject }}
                             </span>
                         @empty
                             <span class="text-xs text-gray-400 italic">Belum ada mapel</span>
@@ -77,17 +77,17 @@
                 <div class="grid grid-cols-2 gap-4 pt-2">
                     <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-indigo-200 transition-colors group/stat">
                         <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 group-hover/stat:text-indigo-500 transition-colors">Total Agenda</p>
-                        <p class="text-2xl font-black text-gray-900">{{ $teacher->agendas_count ?? 0 }}</p>
+                        <p class="text-2xl font-black text-gray-900">{{ $teacher['agendas_count'] ?? 0 }}</p>
                     </div>
                     <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-emerald-200 transition-colors group/stat">
                         <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 group-hover/stat:text-emerald-500 transition-colors">Bulan Ini</p>
-                        <p class="text-2xl font-black text-gray-900">{{ $teacher->monthly_agendas_count ?? 0 }}</p>
+                        <p class="text-2xl font-black text-gray-900">{{ $teacher['monthly_agendas_count'] ?? 0 }}</p>
                     </div>
                 </div>
 
                 <!-- Footer Action -->
                 <div class="mt-4 pt-5 border-t border-gray-50">
-                    <a href="{{ route('admin.teachers.show', $teacher) }}" class="flex items-center justify-center w-full py-3 bg-indigo-50 text-indigo-700 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all group/btn shadow-sm">
+                    <a href="{{ route('admin.teachers.show', $teacher['id']) }}" class="flex items-center justify-center w-full py-3 bg-indigo-50 text-indigo-700 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all group/btn shadow-sm">
                         Lihat Profil Guru
                         <svg class="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                     </a>

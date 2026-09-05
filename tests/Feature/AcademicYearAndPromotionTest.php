@@ -323,4 +323,167 @@ class AcademicYearAndPromotionTest extends TestCase
             }
         }
     }
+
+    /**
+     * Test that editing a student's profile does not overwrite the class
+     * history recorded for the active (source) academic year by promotion.
+     */
+    public function test_editing_student_does_not_overwrite_promotion_history(): void
+    {
+        $sourceClass = Classes::create([
+            'name' => 'XI GUARD 1',
+            'grade_level' => 'XI',
+            'major' => 'GUARD',
+            'academic_year' => '2025/2026',
+            'capacity' => 36,
+            'is_active' => true,
+        ]);
+
+        $targetClass = Classes::create([
+            'name' => 'XII GUARD 1',
+            'grade_level' => 'XII',
+            'major' => 'GUARD',
+            'academic_year' => '2026/2027',
+            'capacity' => 36,
+            'is_active' => true,
+        ]);
+
+        $student = User::factory()->create([
+            'name' => 'Siswa Sekretaris Guard',
+            'email' => 'sekretarisguard@school.test',
+            'nis' => 'SIS-GUARD-001',
+            'gender' => 'L',
+            'class_id' => $targetClass->id,
+            'status' => 'active',
+        ]);
+        $student->assignRole('siswa');
+
+        AcademicYear::query()->update(['is_active' => false]);
+
+        $sourceYear = AcademicYear::create([
+            'name' => '2025/2026',
+            'semester' => 'Genap',
+            'is_active' => true,
+        ]);
+
+        $targetYear = AcademicYear::create([
+            'name' => '2026/2027',
+            'semester' => 'Ganjil',
+        ]);
+
+        // History as produced by promotion: source year = XI, target year = XII.
+        ClassHistory::create([
+            'user_id'          => $student->id,
+            'academic_year_id' => $sourceYear->id,
+            'class_id'         => $sourceClass->id,
+        ]);
+        ClassHistory::create([
+            'user_id'          => $student->id,
+            'academic_year_id' => $targetYear->id,
+            'class_id'         => $targetClass->id,
+        ]);
+
+        // Admin re-saves the profile keeping the current (target) class selected.
+        $response = $this->actingAs($this->admin)
+            ->put('/admin/students/' . $student->id, [
+                'name'      => 'Siswa Sekretaris Guard',
+                'nis'       => 'SIS-GUARD-001',
+                'gender'    => 'L',
+                'class_id'  => $targetClass->id,
+                'status'    => 'active',
+            ]);
+
+        $response->assertSessionHas('success');
+
+        // The source-year history must remain the source (XI) class.
+        $this->assertDatabaseHas('class_histories', [
+            'user_id'          => $student->id,
+            'academic_year_id' => $sourceYear->id,
+            'class_id'         => $sourceClass->id,
+        ]);
+
+        // And it must NOT have been overwritten with the target (XII) class.
+        $this->assertDatabaseMissing('class_histories', [
+            'user_id'          => $student->id,
+            'academic_year_id' => $sourceYear->id,
+            'class_id'         => $targetClass->id,
+        ]);
+    }
+
+    /**
+     * End-to-end: the student history and academic-records pages render the
+     * correct class (XI) for the active year after promotion, not XII.
+     */
+    public function test_student_history_and_academic_records_reflect_source_year_class(): void
+    {
+        $sourceClass = Classes::create([
+            'name' => 'IXI HISTORY 1',
+            'grade_level' => 'XI',
+            'major' => 'HISTORY',
+            'academic_year' => '2025/2026',
+            'capacity' => 36,
+            'is_active' => true,
+        ]);
+
+        $targetClass = Classes::create([
+            'name' => 'IXII HISTORY 1',
+            'grade_level' => 'XII',
+            'major' => 'HISTORY',
+            'academic_year' => '2026/2027',
+            'capacity' => 36,
+            'is_active' => true,
+        ]);
+
+        $student = User::factory()->create([
+            'name' => 'Siswa Riwayat QA',
+            'email' => 'riwayatqa@school.test',
+            'nis' => 'SIS-HIST-001',
+            'gender' => 'P',
+            'class_id' => $targetClass->id,
+            'status' => 'active',
+        ]);
+        $student->assignRole('siswa');
+
+        AcademicYear::query()->update(['is_active' => false]);
+
+        $sourceYear = AcademicYear::create([
+            'name' => '2025/2026',
+            'semester' => 'Genap',
+            'is_active' => true,
+        ]);
+
+        AcademicYear::create([
+            'name' => '2026/2027',
+            'semester' => 'Ganjil',
+        ]);
+
+        ClassHistory::create([
+            'user_id'          => $student->id,
+            'academic_year_id' => $sourceYear->id,
+            'class_id'         => $sourceClass->id,
+        ]);
+
+        $targetYearId = AcademicYear::where('name', '2026/2027')->value('id');
+        ClassHistory::create([
+            'user_id'          => $student->id,
+            'academic_year_id' => $targetYearId,
+            'class_id'         => $targetClass->id,
+        ]);
+
+        // 1. Student history page (per-student riwayat akademik).
+        $response = $this->actingAs($this->admin)->get('/admin/students/' . $student->id . '/history');
+        $response->assertStatus(200);
+        $response->assertSee($sourceClass->name);
+
+        // 2. Academic records index page lists classes with history.
+        $response = $this->actingAs($this->admin)->get('/admin/academic-records');
+        $response->assertStatus(200);
+
+        // 3. Academic records detail page for the active-year class.
+        $yearName = urlencode($sourceYear->name);
+        $response = $this->actingAs($this->admin)
+            ->get("/admin/academic-records/{$sourceClass->id}/show/{$yearName}");
+        $response->assertStatus(200);
+        $response->assertSee('Siswa Riwayat QA');
+    }
 }

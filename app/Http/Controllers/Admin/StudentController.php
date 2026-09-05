@@ -339,17 +339,25 @@ class StudentController extends Controller
             }
         }
 
+        // Jangan timpa riwayat kelas yang sudah tercatat untuk tahun ajaran
+        // aktif (mis. hasil promosi/kelulusan). Edit data siswa hanya boleh
+        // membuat riwayat apabila belum ada untuk tahun ajaran tersebut.
         $activeYear = \App\Models\AcademicYear::where('is_active', true)->first();
         if ($activeYear) {
             $class = \App\Models\Classes::find($request->class_id);
             if ($class) {
-                \App\Models\ClassHistory::updateOrCreate([
-                    'user_id' => $student->id,
-                    'academic_year_id' => $activeYear->id,
-                ], [
-                    'class_id' => $class->id,
-                    'homeroom_teacher_id' => $class->homeroom_teacher_id,
-                ]);
+                $hasHistory = \App\Models\ClassHistory::where('user_id', $student->id)
+                    ->where('academic_year_id', $activeYear->id)
+                    ->exists();
+
+                if (!$hasHistory) {
+                    \App\Models\ClassHistory::create([
+                        'user_id' => $student->id,
+                        'academic_year_id' => $activeYear->id,
+                        'class_id' => $class->id,
+                        'homeroom_teacher_id' => $class->homeroom_teacher_id,
+                    ]);
+                }
             }
         }
 

@@ -28,9 +28,9 @@
                     <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path d="M10.394 2.827a1 1 0 00-.788 0l-7 3a1 1 0 000 1.848l7 3a1 1 0 00.788 0l7-3a1 1 0 000-1.848l-7-3zM14 11.595l-3.223 1.381A3.001 3.001 0 0110 15V7.103l4-1.714v6.206z"></path></svg>
                 </div>
                 <div class="relative">
-                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-blue-100">Kapasitas {{ $class->capacity }} Siswa</span>
-                    <h3 class="text-xl font-black mt-1">{{ $class->name }}</h3>
-                    <p class="text-blue-100/80 text-xs font-bold uppercase tracking-wider mt-1">Level {{ $class->grade_level }}</p>
+                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-blue-100">Kapasitas {{ $class['capacity'] }} Siswa</span>
+                    <h3 class="text-xl font-black mt-1">{{ $class['name'] }}</h3>
+                    <p class="text-blue-100/80 text-xs font-bold uppercase tracking-wider mt-1">Level {{ $class['grade_level'] }}</p>
                 </div>
             </div>
 
@@ -43,17 +43,17 @@
                         </div>
                         <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Wali Kelas</span>
                     </div>
-                    <span class="text-sm font-black text-gray-900">{{ $class->homeroomTeacher->name ?? '-' }}</span>
+                    <span class="text-sm font-black text-gray-900">{{ $class['homeroom'] ?? '-' }}</span>
                 </div>
 
                 <!-- Student Progress -->
                 <div>
                     <div class="flex justify-between items-end mb-2">
                         <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Kepadatan Siswa</span>
-                        <span class="text-xs font-black text-gray-900">{{ $class->students_count }} / {{ $class->capacity }}</span>
+                        <span class="text-xs font-black text-gray-900">{{ $class['students_count'] }} / {{ $class['capacity'] }}</span>
                     </div>
                     <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                        @php $studentPct = ($class->students_count / max($class->capacity, 1)) * 100; @endphp
+                        @php $studentPct = ($class['students_count'] / max($class['capacity'], 1)) * 100; @endphp
                         <div class="bg-blue-600 h-full rounded-full transition-all duration-700" style="width: {{ $studentPct }}%"></div>
                     </div>
                 </div>
@@ -62,22 +62,22 @@
                 <div class="grid grid-cols-2 gap-4 pt-2">
                     <div class="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
                         <p class="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1">Total Agenda</p>
-                        <p class="text-lg font-black text-indigo-700">{{ $class->agendas_count }}</p>
+                        <p class="text-lg font-black text-indigo-700">{{ $class['agendas_count'] }}</p>
                     </div>
                     <div class="p-3 bg-emerald-50/50 rounded-2xl border border-emerald-100/50 text-right">
                         <p class="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">Presensi</p>
-                        <p class="text-lg font-black text-emerald-700">{{ $class->attendance_rate }}%</p>
+                        <p class="text-lg font-black text-emerald-700">{{ $class['attendance_rate'] }}%</p>
                     </div>
                 </div>
 
                 <!-- Attendance Progress -->
                 <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                    <div class="bg-emerald-500 h-full rounded-full transition-all duration-700 shadow-[0_0_8px_rgba(16,185,129,0.5)]" style="width: {{ $class->attendance_rate }}%"></div>
+                    <div class="bg-emerald-500 h-full rounded-full transition-all duration-700 shadow-[0_0_8px_rgba(16,185,129,0.5)]" style="width: {{ $class['attendance_rate'] }}%"></div>
                 </div>
 
                 <!-- Card Footer -->
                 <div class="mt-4 pt-5 border-t border-gray-50 flex items-center justify-between">
-                    <a href="{{ route('admin.classes.show', $class) }}" class="inline-flex items-center text-xs font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest group/link transition-all">
+                    <a href="{{ route('admin.classes.show', $class['id']) }}" class="inline-flex items-center text-xs font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest group/link transition-all">
                         Detail Kelas
                         <svg class="w-4 h-4 ml-1 group-hover/link:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
                     </a>
