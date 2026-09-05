@@ -864,6 +864,31 @@ class StudentDispensationTest extends TestCase
         $this->assertStringNotContainsString('Alpha', $response->getContent());
     }
 
+    public function test_student_daily_attendance_defaults_on_non_operational_day(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-08-08 20:00:00'));
+
+        $response = $this->actingAs($this->student)->get(route('siswa.daily-attendance.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Hari non-operasional');
+        $response->assertSeeText('Hari ini bukan hari operasional sekolah.');
+        $response->assertSee('Hari tutup', false);
+        $this->assertStringNotContainsString('Alpha', $response->getContent());
+    }
+
+    public function test_student_presensi_page_defaults_on_non_operational_day(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-08-08 20:00:00'));
+
+        $response = $this->actingAs($this->student)->get(route('siswa.attendance.index', ['month' => '2026-08']));
+
+        $response->assertOk();
+        $response->assertSeeText('Belum Ada Presensi');
+        $response->assertSeeText('Belum ada riwayat');
+        $this->assertStringNotContainsString('Status Hari Ini', $response->getContent());
+    }
+
     public function test_sick_student_shown_as_sakit_not_tidak_masuk_on_monitor(): void
     {
         StudentEarlyLeaveRequest::create([

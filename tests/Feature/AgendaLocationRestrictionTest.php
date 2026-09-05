@@ -50,6 +50,9 @@ class AgendaLocationRestrictionTest extends TestCase
         Setting::set('agenda_location_latitude', '-6.200000', 'general', $this->teacher->institution_id);
         Setting::set('agenda_location_longitude', '106.816666', 'general', $this->teacher->institution_id);
         Setting::set('agenda_location_radius_meters', '100', 'general', $this->teacher->institution_id);
+
+        // Mode 'normal': jadwal 'semua' berlaku setiap hari, fokus test pada lokasi agenda.
+        Setting::set('schedule_mode', 'normal', 'general', $this->teacher->institution_id);
     }
 
     public function test_agenda_store_requires_location_when_restriction_enabled(): void

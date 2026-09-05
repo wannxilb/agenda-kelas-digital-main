@@ -4,6 +4,22 @@
 @section('title', 'Manajemen Jadwal')
 @section('header', 'Manajemen Jadwal Pelajaran')
 
+@push('styles')
+<style>
+    /* Sembunyikan scrollbar horizontal pada area isi jadwal (tabel & kalender).
+       Konten tetap bisa digeser (scroll wheel + Shift, atau dua jari di trackpad). */
+    .x-scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    .x-scrollbar-hide::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="space-y-8 pb-8">
     <!-- Header Section -->
@@ -170,11 +186,19 @@
                     Tampilan Kalender
                 </button>
             </nav>
-            <div class="pt-3 pb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] font-bold uppercase tracking-wider border-t border-gray-100 mt-2">
-                <span class="text-gray-400">Legenda Minggu:</span>
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border bg-purple-100 text-purple-800 border-purple-300">Minggu Ganjil</span>
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border bg-teal-100 text-teal-800 border-teal-300">Minggu Genap</span>
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border bg-gray-100 text-gray-600 border-gray-300">Setiap Minggu</span>
+            <div id="schedule-mode-legend" class="pt-3 pb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] font-bold uppercase tracking-wider border-t border-gray-100 mt-2">
+                <span class="text-gray-400">Mode & Minggu Aktif:</span>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border bg-indigo-100 text-indigo-800 border-indigo-300">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"></path></svg>
+                    {{ ucfirst($scheduleMode) }} · {{ $activeWeekLabel }}
+                </span>
+                <span class="text-gray-400 ml-2">Agenda Minggu:</span>
+                @if($scheduleMode === 'block')
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border bg-purple-100 text-purple-800 border-purple-300">Minggu Ganjil</span>
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border bg-teal-100 text-teal-800 border-teal-300">Minggu Genap</span>
+                @else
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border bg-gray-100 text-gray-600 border-gray-300">Setiap Minggu</span>
+                @endif
             </div>
         </div>
         
@@ -211,25 +235,50 @@
                         
                         <!-- Accordion Body (Table) -->
                         <div x-show="open" x-collapse x-cloak>
-                            <div class="overflow-x-auto border-t border-gray-100 bg-white">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-50/80">
-                                        <tr>
-                                            <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Hari</th>
-                                            <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Mata Pelajaran</th>
-                                            <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Guru</th>
-                                            <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Jam & Ruang</th>
-                                            <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="bg-white divide-y divide-gray-100">
-                                        @php
-                                            $dayOrderMap = ['Monday' => 1, 'Tuesday' => 2, 'Wednesday' => 3, 'Thursday' => 4, 'Friday' => 5];
-                                            $sortedClassSchedules = $classSchedules->sortBy(function($sch) use ($dayOrderMap) {
-                                                return ($dayOrderMap[$sch->day] ?? 99) . '-' . $sch->start_time;
-                                            });
-                                        @endphp
-                                        @foreach($sortedClassSchedules as $schedule)
+                            @php
+                                $weekSections = [];
+                                if ($scheduleMode === 'block') {
+                                    $weekSections = [
+                                        ['key' => 'ganjil', 'label' => 'Minggu Ganjil', 'accent' => 'purple'],
+                                        ['key' => 'genap', 'label' => 'Minggu Genap', 'accent' => 'teal'],
+                                    ];
+                                } else {
+                                    $weekSections = [['key' => null, 'label' => null, 'accent' => null]];
+                                }
+                                $dayOrderMap = ['Monday' => 1, 'Tuesday' => 2, 'Wednesday' => 3, 'Thursday' => 4, 'Friday' => 5];
+                            @endphp
+                            @foreach($weekSections as $weekSection)
+                                @php
+                                    $sectionSchedules = $weekSection['key']
+                                        ? $classSchedules->filter(fn($sc) => $sc->week_type === $weekSection['key'])
+                                        : $classSchedules;
+                                    $sortedSectionSchedules = $sectionSchedules->sortBy(function($sch) use ($dayOrderMap) {
+                                        return ($dayOrderMap[$sch->day] ?? 99) . '-' . $sch->start_time;
+                                    });
+                                @endphp
+                                @if($scheduleMode === 'block')
+                                <div class="px-6 py-3 {{ $weekSection['accent'] === 'purple' ? 'bg-purple-50/70 border-t border-purple-100' : 'bg-teal-50/70 border-t border-teal-100' }} flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-1.5 h-1.5 rounded-full {{ $weekSection['accent'] === 'purple' ? 'bg-purple-500' : 'bg-teal-500' }}"></span>
+                                        <span class="text-xs font-bold uppercase tracking-wider {{ $weekSection['accent'] === 'purple' ? 'text-purple-700' : 'text-teal-700' }}">{{ $weekSection['label'] }}</span>
+                                    </div>
+                                    <span class="text-[11px] text-gray-400 font-medium">{{ $sectionSchedules->count() }} jadwal</span>
+                                </div>
+                                @endif
+                                @if($sortedSectionSchedules->isNotEmpty())
+                                <div class="overflow-x-auto x-scrollbar-hide border-t border-gray-100 bg-white">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50/80">
+                                            <tr>
+                                                <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Hari</th>
+                                                <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Mata Pelajaran</th>
+                                                <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Guru</th>
+                                                <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Jam & Ruang</th>
+                                                <th class="px-6 py-4 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-100">
+                                        @foreach($sortedSectionSchedules as $schedule)
                                         <tr class="hover:bg-blue-50/40 transition-colors group">
                                             <td class="px-6 py-5 whitespace-nowrap align-middle">
                                                 @php
@@ -248,16 +297,11 @@
                                             </td>
                                             <td class="px-6 py-5 align-middle min-w-[200px]">
                                                 <div class="text-sm font-bold text-gray-900 leading-tight">{{ $schedule->subject->name }}</div>
-                                                @if($schedule->week_type && $schedule->week_type !== 'semua')
+                                                @if($scheduleMode === 'block' && $schedule->week_type && $schedule->week_type !== 'semua')
                                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 mt-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border
                                                         {{ $schedule->week_type == 'ganjil' ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-teal-100 text-teal-800 border-teal-300' }}">
                                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                                         {{ $schedule->week_type == 'ganjil' ? 'Minggu Ganjil' : 'Minggu Genap' }}
-                                                    </span>
-                                                @else
-                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 mt-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-gray-100 text-gray-600 border-gray-300">
-                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                                        Setiap Minggu
                                                     </span>
                                                 @endif
                                             </td>
@@ -307,13 +351,19 @@
                                                             </svg>
                                                         </button>
                                                     </form>
-                                                </div>
-                                            </td>
+</div>
+                                        </td>
                                         </tr>
                                         @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @elseif($scheduleMode === 'block')
+                                <div class="px-6 py-6 text-center text-xs text-gray-400 border-t border-gray-100 bg-gray-50/40">
+                                    Tidak ada jadwal untuk {{ $weekSection['label'] }}
+                                </div>
+                                @endif
+                            @endforeach
                         </div>
                     </div>
                     @endforeach
@@ -381,7 +431,34 @@
                             </div>
                         </button>
                         <div x-show="openCal === '{{ $classId }}'" x-collapse x-cloak>
-                            <div class="overflow-x-auto border-t border-gray-100 bg-white rounded-b-2xl">
+                            @php
+                                $calWeekSections = [];
+                                if ($scheduleMode === 'block') {
+                                    $calWeekSections = [
+                                        ['key' => 'ganjil', 'label' => 'Minggu Ganjil', 'accent' => 'purple'],
+                                        ['key' => 'genap', 'label' => 'Minggu Genap', 'accent' => 'teal'],
+                                    ];
+                                } else {
+                                    $calWeekSections = [['key' => null, 'label' => null, 'accent' => null]];
+                                }
+                            @endphp
+                            @foreach($calWeekSections as $calWeekSection)
+                            @php
+                                $calSectionSchedules = $calWeekSection['key']
+                                    ? array_values(array_filter($classData['schedules'], fn($sc) => $sc->week_type === $calWeekSection['key']))
+                                    : array_values($classData['schedules']);
+                            @endphp
+                            @if($scheduleMode === 'block')
+                                <div class="px-6 py-3 {{ $calWeekSection['accent'] === 'purple' ? 'bg-purple-50/70 border-t border-purple-100' : 'bg-teal-50/70 border-t border-teal-100' }} flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-1.5 h-1.5 rounded-full {{ $calWeekSection['accent'] === 'purple' ? 'bg-purple-500' : 'bg-teal-500' }}"></span>
+                                        <span class="text-xs font-bold uppercase tracking-wider {{ $calWeekSection['accent'] === 'purple' ? 'text-purple-700' : 'text-teal-700' }}">{{ $calWeekSection['label'] }}</span>
+                                    </div>
+                                    <span class="text-[11px] text-gray-400 font-medium">{{ count($calSectionSchedules) }} jadwal</span>
+                                </div>
+                            @endif
+                            @if(count($calSectionSchedules) > 0)
+                            <div class="overflow-x-auto x-scrollbar-hide border-t border-gray-100 bg-white rounded-b-2xl">
                                 <table class="min-w-full border-collapse">
                                     <thead>
                                         <tr class="bg-gray-50">
@@ -411,7 +488,7 @@
                                                     <td class="border-b border-gray-100 p-3 align-top bg-white" style="min-height: 120px;">
                                                         @php
                                                             $schedulesAtTime = [];
-                                                            foreach($classData['schedules'] as $schedule) {
+                                                            foreach($calSectionSchedules as $schedule) {
                                                                 $startTimeStr = \Carbon\Carbon::parse($schedule->start_time)->format('H:i');
                                                                 if($schedule->day == $dayKey && $startTimeStr == $slot['time']) { 
                                                                     $schedulesAtTime[] = $schedule; 
@@ -434,19 +511,12 @@
                                                                 <div class="flex justify-between items-start mb-1">
                                                                     <p class="font-bold text-blue-900 text-xs leading-tight">{{ $schedule->subject->name }}</p>
                                                                 </div>
-                                                                @if($schedule->week_type && $schedule->week_type !== 'semua')
+                                                                @if($scheduleMode === 'block' && $schedule->week_type && $schedule->week_type !== 'semua')
                                                                     <div class="mb-1">
                                                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border
                                                                             {{ $schedule->week_type == 'ganjil' ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-teal-100 text-teal-800 border-teal-300' }}">
                                                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                                                             {{ $schedule->week_type == 'ganjil' ? 'Minggu Ganjil' : 'Minggu Genap' }}
-                                                                        </span>
-                                                                    </div>
-                                                                @else
-                                                                    <div class="mb-1">
-                                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-gray-100 text-gray-600 border-gray-300">
-                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                                                            Setiap Minggu
                                                                         </span>
                                                                     </div>
                                                                 @endif
@@ -504,6 +574,12 @@
                                     </tbody>
                                 </table>
                             </div>
+                            @elseif($scheduleMode === 'block')
+                                <div class="px-6 py-6 text-center text-xs text-gray-400 border-t border-gray-100 bg-gray-50/40">
+                                    Tidak ada jadwal untuk {{ $calWeekSection['label'] }}
+                                </div>
+                            @endif
+                            @endforeach
                         </div>
                     </div>
                 @endforeach
@@ -600,6 +676,9 @@
             return r.json();
         }).then(function () {
             showScheduleToast(scheduleModeMessage(mode), 'success');
+            if (typeof window.refreshScheduleData === 'function') {
+                window.refreshScheduleData();
+            }
         }).catch(function () {
             scheduleModeCurrent = previous;
             applyScheduleModeActive(previous);
@@ -641,6 +720,47 @@
                 }
             } catch (e) {}
         }
+        // Refresh penuh sisi tabel & kalender + legenda mode/minggu aktif.
+        // Dipakai segera setelah mode (Block/Normal) diganti agar data langsung
+        // tampil tanpa harus menunggu tick polling berikutnya (30 detik).
+        let scheduleRefreshInFlight = false;
+        async function refreshScheduleData() {
+            if (scheduleRefreshInFlight) return;
+            scheduleRefreshInFlight = true;
+            try {
+                const response = await fetch(window.location.href, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    cache: 'no-store'
+                });
+                const html = await response.text();
+
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                const newTableTab = doc.querySelector('[x-show="activeTab === \'table\'"]');
+                const oldTableTab = document.querySelector('[x-show="activeTab === \'table\'"]');
+                if (newTableTab && oldTableTab) {
+                    oldTableTab.innerHTML = newTableTab.innerHTML;
+                }
+
+                const newCalendarTab = doc.querySelector('[x-show="activeTab === \'calendar\'"]');
+                const oldCalendarTab = document.querySelector('[x-show="activeTab === \'calendar\'"]');
+                if (newCalendarTab && oldCalendarTab) {
+                    oldCalendarTab.innerHTML = newCalendarTab.innerHTML;
+                }
+
+                const newLegend = doc.querySelector('#schedule-mode-legend');
+                const oldLegend = document.querySelector('#schedule-mode-legend');
+                if (newLegend && oldLegend) {
+                    oldLegend.innerHTML = newLegend.innerHTML;
+                }
+            } catch (e) {}
+            finally {
+                scheduleRefreshInFlight = false;
+            }
+        }
+        window.refreshScheduleData = refreshScheduleData;
+
         // Smart polling: no overlap + backoff + pause when tab hidden.
         poll(pollSchedules, { interval: 30000, backoffMax: 120000 });
     });

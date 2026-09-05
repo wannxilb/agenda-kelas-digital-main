@@ -12,7 +12,7 @@ class DailyAttendancePresensiSync
 {
     public function __construct(private AttendanceStatusResolver $resolver) {}
 
-    public function sync(StudentDailyAttendance $dailyAttendance): Attendance
+    public function sync(StudentDailyAttendance $dailyAttendance): ?Attendance
     {
         $dailyAttendance->loadMissing('student');
 
@@ -33,14 +33,31 @@ class DailyAttendancePresensiSync
             ->first();
 
         $isOverdue = false;
+        $isOperational = null;
         if (! $dailyAttendance->check_in_at && ! $approvedRequest) {
             $institutionId = $dailyAttendance->institution_id ?: $dailyAttendance->student?->institution_id;
             $setting = DailyAttendanceSetting::forInstitution($institutionId);
             $verificationDeadline = Carbon::parse($date.' '.$setting->check_in_verification_deadline);
             $isOverdue = now()->greaterThan($verificationDeadline);
+            $isOperational = $this->resolver->isOperationalAttendanceDate($institutionId, $date);
         }
 
-        $status = $this->resolver->deriveStatus($dailyAttendance, $approvedRequest, $isOverdue, $date);
+        $status = $this->resolver->deriveStatus(
+            $dailyAttendance,
+            $approvedRequest,
+            $isOverdue,
+            $date,
+            $isOperational === false ? false : null
+        );
+
+        if ($status === 'not_yet' && $isOperational === false) {
+            if ($attendance && $attendance->source === 'digital' && $attendance->status === 'absent') {
+                $attendance->delete();
+            }
+
+            return null;
+        }
+
         $finalStatus = $status === 'not_yet' ? 'absent' : $status;
 
         $attendance ??= new Attendance([

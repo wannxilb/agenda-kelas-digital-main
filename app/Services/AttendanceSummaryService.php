@@ -120,7 +120,8 @@ class AttendanceSummaryService
                 if ($attendance) {
                     $setting = $settings[$attendance->institution_id] ?? null;
                     $deadline = Carbon::parse($date.' '.($setting->check_in_verification_deadline ?? '23:59'));
-                    $resolved[$date] = $this->resolver->deriveStatus($attendance, null, now()->greaterThan($deadline), $date);
+                    $isOperational = $this->resolver->isOperationalAttendanceDate($attendance->institution_id, $date);
+                    $resolved[$date] = $this->resolver->deriveStatus($attendance, null, now()->greaterThan($deadline), $date, $isOperational);
 
                     continue;
                 }
@@ -129,7 +130,8 @@ class AttendanceSummaryService
                 if ($student && $student->institution_id) {
                     $setting = $settings[$student->institution_id] ?? null;
                     $deadline = Carbon::parse($date.' '.($setting->check_in_verification_deadline ?? '23:59:00'));
-                    $resolved[$date] = $this->resolver->deriveStatus(null, null, now()->greaterThan($deadline), $date);
+                    $isOperational = $this->resolver->isOperationalAttendanceDate($student->institution_id, $date);
+                    $resolved[$date] = $this->resolver->deriveStatus(null, null, now()->greaterThan($deadline), $date, $isOperational);
                 }
             }
 
@@ -175,7 +177,8 @@ class AttendanceSummaryService
      * Resolve status for students without any manual/digital/izin record on the date.
      *
      * Mirrors the digital kehadiran monitor: no check-in + verification deadline
-     * passed = 'absent' (alpha), otherwise 'not_yet'.
+     * passed = 'absent' (alpha). Di luar hari operasional tak dihitung dan tetap
+     * 'not_yet' (default).
      *
      * @param  array<int, int>  $studentIds
      * @param  array<int, string|null>  $result
@@ -209,7 +212,8 @@ class AttendanceSummaryService
                 $digital->get($studentId),
                 $leaveRequests->get($studentId)?->first(),
                 now()->greaterThan($deadline),
-                $date
+                $date,
+                $this->resolver->isOperationalAttendanceDate($student->institution_id, $date)
             );
         }
     }

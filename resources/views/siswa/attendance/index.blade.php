@@ -152,8 +152,8 @@
                         $daysOfWeek = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
                         $firstDayOfMonth = \Carbon\Carbon::parse(request('month', date('Y-m')))->startOfMonth();
                         $lastDayOfMonth = \Carbon\Carbon::parse(request('month', date('Y-m')))->endOfMonth();
-                        $startDay = $firstDayOfMonth->copy()->startOfWeek();
-                        $endDay = $lastDayOfMonth->copy()->endOfWeek();
+                        $startDay = $firstDayOfMonth->copy()->startOfWeek(\Carbon\Carbon::SUNDAY);
+                        $endDay = $lastDayOfMonth->copy()->endOfWeek(\Carbon\Carbon::SATURDAY);
                         
                         $attendanceMap = [];
                         foreach($attendances as $att) {

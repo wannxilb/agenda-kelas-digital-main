@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AcademicYear;
 use App\Models\Classes;
 use App\Models\Institution;
+use App\Models\Setting;
 use App\Models\StudentDailyAttendance;
 use App\Models\StudentEarlyLeaveRequest;
 use App\Models\User;
@@ -117,6 +118,24 @@ class AttendanceStatusResolverTest extends TestCase
         ]);
 
         $this->assertEquals('sick', $this->resolver->resolve($this->student->id, '2026-08-03'));
+    }
+
+    public function test_returns_not_yet_on_non_operational_day_when_overdue(): void
+    {
+        $this->assertEquals('not_yet', $this->resolver->resolve($this->student->id, '2026-08-08'));
+    }
+
+    public function test_returns_not_yet_when_overdue_on_non_operational_day(): void
+    {
+        $this->assertEquals('not_yet', $this->resolver->deriveStatus(null, null, true, '2026-08-08', false));
+        $this->assertEquals('absent', $this->resolver->deriveStatus(null, null, true, '2026-08-08'));
+    }
+
+    public function test_returns_absent_on_weekend_when_override_active(): void
+    {
+        Setting::set('operational_override_until', '2026-12-31', 'general', $this->institutionId);
+
+        $this->assertEquals('absent', $this->resolver->resolve($this->student->id, '2026-08-08'));
     }
 
     public function test_returns_excused_when_izin_lainnya_approved(): void

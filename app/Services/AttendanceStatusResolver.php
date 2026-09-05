@@ -33,14 +33,21 @@ class AttendanceStatusResolver
         $verificationDeadline = Carbon::parse($date.' '.$setting->check_in_verification_deadline);
         $isOverdue = now()->greaterThan($verificationDeadline);
 
-        return $this->deriveStatus($attendance, $approvedRequest, $isOverdue, $date);
+        return $this->deriveStatus(
+            $attendance,
+            $approvedRequest,
+            $isOverdue,
+            $date,
+            $this->isOperationalAttendanceDate($student->institution_id, $date)
+        );
     }
 
     public function deriveStatus(
         ?StudentDailyAttendance $attendance,
         ?StudentEarlyLeaveRequest $approvedRequest,
         bool $isOverdue = false,
-        ?string $date = null
+        ?string $date = null,
+        ?bool $isOperational = null
     ): string {
         if ($this->isTidakHadir($approvedRequest)) {
             return $approvedRequest->category === 'sakit'
@@ -60,10 +67,35 @@ class AttendanceStatusResolver
             return $this->deriveCheckInStatus($attendance);
         }
 
+        // Di luar hari/jam operasional, siswa tanpa kehadiran tidak dihitung
+        // sebagai alpha; tetap berstatus default 'not_yet' (Belum Absen).
+        if ($isOperational === false) {
+            return 'not_yet';
+        }
+
         return $isOverdue ? 'absent' : 'not_yet';
     }
 
-    private function dispenWithoutCheckInStatus(StudentEarlyLeaveRequest $request, ?string $date): string
+    /**
+     * Apakah tanggal tertentu termasuk hari operasional sekolah.
+     *
+     * Mengikuti kontrak yang sama dengan CheckOperationalHours / wali kelas:
+     * override (operational_override_until) didahulukan, lalu hari sesuai
+     * setting operational_days.
+     */
+    public function isOperationalAttendanceDate(?int $institutionId, string $date): bool
+    {
+        $overrideUntil = Setting::get('operational_override_until', null, $institutionId);
+        if ($overrideUntil && Carbon::parse($overrideUntil)->isFuture()) {
+            return true;
+        }
+
+        $operationalDays = array_filter(explode(',', Setting::get('operational_days', '1,2,3,4,5', $institutionId)));
+
+        return in_array((string) Carbon::parse($date)->dayOfWeekIso, $operationalDays, true);
+    }
+
+    public function dispenWithoutCheckInStatus(StudentEarlyLeaveRequest $request, ?string $date): string
     {
         $today = now()->toDateString();
         if ($date === null || $date > $today) {

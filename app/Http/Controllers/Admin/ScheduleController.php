@@ -37,7 +37,15 @@ class ScheduleController extends Controller
     public function index(Request $request)
     {
         $query = Schedule::with(['class', 'subject', 'teacher', 'room_model']);
-        
+
+        // Filter sesuai mode penjadwalan:
+        //  - 'normal' -> hanya jadwal 'semua'
+        //  - 'block'  -> jadwal 'ganjil' DAN 'genap'; di tabel & kalender
+        //               ditampilkan terpisah dalam dua bagian bertumpuk
+        $scheduleMode = Setting::scheduleMode();
+        $weekTypes = $scheduleMode === 'block' ? ['ganjil', 'genap'] : ['semua'];
+        $query->whereIn('week_type', $weekTypes);
+
         if ($request->has('class_id') && $request->class_id) {
             $query->where('class_id', $request->class_id);
         }
@@ -58,9 +66,11 @@ class ScheduleController extends Controller
             
         $classList = Classes::orderBy('name')->get();
         $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-        $scheduleMode = Setting::scheduleMode();
 
-        return view('admin.schedules.index', compact('schedules', 'classList', 'days', 'scheduleMode'));
+        $weekTypeLabels = ['semua' => 'Setiap Minggu', 'ganjil' => 'Minggu Ganjil', 'genap' => 'Minggu Genap'];
+        $activeWeekLabel = implode(' & ', array_map(fn ($wt) => $weekTypeLabels[$wt] ?? $wt, $weekTypes));
+
+        return view('admin.schedules.index', compact('schedules', 'classList', 'days', 'scheduleMode', 'activeWeekLabel'));
     }
 
     public function getAvailableRooms(Request $request)

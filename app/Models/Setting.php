@@ -211,25 +211,84 @@ class Setting extends Model
     /**
      * Daftar week_type yang tampil pada tanggal tertentu.
      *
-     * Mode 'normal' -> semua minggu ikut tampil (tidak bedakan ganjil/genap).
-     * Mode 'block'  -> 'semua' + sesuai minggu ke-berapa dalam bulan berjalan:
-     *                  minggu ke-1,3,5 (ganjil) atau ke-2,4 (genap).
+     * Mode 'normal' -> hanya jadwal 'semua' (setiap minggu, tanpa pembedaan
+     *                  ganjil/genap). Jadwal ganjil/genap diabaikan.
+     * Mode 'block'  -> hanya jadwal sesuai minggu ke-berapa dari titik tetap:
+     *                  minggu ganjil (ke-1,3,5,...) -> 'ganjil'
+     *                  minggu genap (ke-2,4,6,...)  -> 'genap'.
+     *
+     * Titik tetap diambil dari awal tahun ajaran aktif (start_date), dibulatkan
+     * ke Senin di minggu awal tersebut. Karena setiap kalender minggu (Senin-Minggu)
+     * selalu jadi satu paritas, satu minggu pelajaran tidak pernah terbelah meski
+     * membentang lintas bulan.
      *
      * @return string[]
      */
     public static function scheduleWeekTypesForDate(\Carbon\Carbon $date): array
     {
         if (self::scheduleMode() === 'normal') {
-            return ['semua', 'ganjil', 'genap'];
+            return ['semua'];
         }
 
-        $weekNumber = (int) floor(($date->day - 1) / 7) + 1;
+        $anchor = self::scheduleWeekAnchor($date);
 
-        if ($weekNumber % 2 === 1) {
-            return ['semua', 'ganjil'];
+        $weekNumber = (int) floor($anchor->diffInDays($date->copy()->startOfDay()) / 7) + 1;
+
+        return ($weekNumber % 2 === 1) ? ['ganjil'] : ['genap'];
+    }
+
+    /**
+     * Titik tetap (Senin) untuk menomori minggu bergantian ganjil/genap.
+     *
+     * Prioritas:
+     *  1. start_date tahun ajaran yang menaungi tanggal tsb (cari berdasar
+     *     rentang start_date..end_date, yang paling baru duluan).
+     *  2. start_date tahun ajaran aktif (bila tak ada yang menaungi).
+     *  3. Batas semester: 1 Juli untuk semester ganjil (Bulan >= 7) dan
+     *     1 Januari untuk semester genap (Bulan < 7).
+     *
+     * Selalu dibulatkan ke Senin di minggu awal. Karena batas semester selalu
+     * dipakai sebagai "pagar bawah", hitungan ganjil/genap otomatis restart tiap
+     * pergantian semester: semester genap dihitung ulang dari 1 Januari,
+     * semester ganjil dari 1 Juli.
+     */
+    private static function scheduleWeekAnchor(\Carbon\Carbon $date): \Carbon\Carbon
+    {
+        $institutionId = auth()->hasUser() ? auth()->user()->institution_id : null;
+
+        // 1) Tahun ajaran/semester yang menaungi tanggal ini (paling baru duluan).
+        $covering = AcademicYear::query()
+            ->when($institutionId, fn ($q) => $q->where('institution_id', $institutionId))
+            ->whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->orderByDesc('start_date')
+            ->first();
+
+        $candidate = $covering?->start_date;
+
+        // 2) Bila tak ada yang menaungi, coba tahun ajaran aktif.
+        if ($candidate === null) {
+            $activeYear = AcademicYear::query()
+                ->when($institutionId, fn ($q) => $q->where('institution_id', $institutionId))
+                ->where('is_active', true)
+                ->orderByDesc('id')
+                ->first();
+
+            $candidate = $activeYear?->start_date;
         }
 
-        return ['semua', 'genap'];
+        // 3) Pagar bawah semester: 1 Juli (ganjil) atau 1 Januari (genap).
+        $semesterBoundary = $date->month >= 7
+            ? $date->copy()->month(7)->startOfMonth()
+            : $date->copy()->month(1)->startOfMonth();
+
+        // Pakai start_date tahun ajaran hanya jika masuk akal:
+        // sudah dimulai (<= $date) dan tidak lebih lama dari pagar semester.
+        $anchor = ($candidate && $candidate->lte($date) && $candidate->gte($semesterBoundary))
+            ? $candidate
+            : $semesterBoundary;
+
+        return $anchor->copy()->startOfWeek(\Carbon\Carbon::MONDAY);
     }
 
     public function institution()

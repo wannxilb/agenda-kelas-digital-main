@@ -9,6 +9,7 @@ use App\Models\Classes;
 use App\Models\Subject;
 use App\Models\Schedule;
 use App\Models\Agenda;
+use App\Models\Setting;
 use Carbon\Carbon;
 
 class AgendaRoomDropdownTest extends TestCase
@@ -48,6 +49,9 @@ class AgendaRoomDropdownTest extends TestCase
             'end_time' => '10:00:00',
             'room' => 'Lab RPL 1'
         ]);
+
+        // Mode 'normal': jadwal 'semua' berlaku setiap hari, fokus test pada dropdown ruang.
+        Setting::set('schedule_mode', 'normal', 'general');
     }
 
     /**

@@ -30,6 +30,7 @@ class DashboardController extends Controller
         // Today's Teaching Schedule
         $todaySchedules = $teacher->teachingSchedules()
             ->where('day', $today)
+            ->whereIn('week_type', \App\Models\Setting::scheduleWeekTypesForDate(\Carbon\Carbon::today()))
             ->with(['class', 'subject'])
             ->orderBy('start_time')
             ->get();

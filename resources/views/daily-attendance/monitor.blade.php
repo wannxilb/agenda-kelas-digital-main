@@ -22,13 +22,24 @@
     $operationalEndTime = $firstRecord?->student?->institution_id
         ? \App\Models\Setting::get('operational_end_time', '16:00', $firstRecord->student->institution_id)
         : '16:00';
+    $operationalInstitutionId = $firstRecord?->student?->institution_id;
+    $operationalOverrideUntil = $operationalInstitutionId
+        ? \App\Models\Setting::get('operational_override_until', null, $operationalInstitutionId)
+        : null;
+    $isOperationalDate = (bool) ($operationalOverrideUntil && \Carbon\Carbon::parse($operationalOverrideUntil)->isFuture())
+        ? true
+        : in_array(
+            (string) \Carbon\Carbon::parse($date)->dayOfWeekIso,
+            array_filter(explode(',', \App\Models\Setting::get('operational_days', '1,2,3,4,5', $operationalInstitutionId))),
+            true
+        );
     $hasApprovedFullDayStatus = function ($record) use ($date) {
         return $record->earlyLeaveRequests->contains(fn ($request) => $request->status === 'approved'
             && ($request->isTidakHadirCategory() || $request->isDispenCategory())
             && $request->coversDate($date));
     };
-    $notYetEnteredCount = $records->filter(fn ($record) => $record->check_in_at === null && !$noCheckInOverdue && !$hasApprovedFullDayStatus($record))->count();
-    $alphaCount = $records->filter(fn ($record) => $record->check_in_at === null && $noCheckInOverdue && !$hasApprovedFullDayStatus($record))->count();
+    $notYetEnteredCount = $records->filter(fn ($record) => $record->check_in_at === null && (!$noCheckInOverdue || !$isOperationalDate) && !$hasApprovedFullDayStatus($record))->count();
+    $alphaCount = $records->filter(fn ($record) => $record->check_in_at === null && $noCheckInOverdue && $isOperationalDate && !$hasApprovedFullDayStatus($record))->count();
     $exceptionCount = $lateCount + $verificationCount + $notYetEnteredCount + $alphaCount;
 @endphp
 
@@ -129,27 +140,25 @@
         </div>
     </form>
 
-    @if($exceptionCount > 0)
-        <section class="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            <div class="rounded-2xl border border-amber-100 bg-amber-50 p-3 shadow-sm">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-amber-600">Terlambat</p>
-                <p class="mt-1 text-xl font-black text-amber-700">{{ $lateCount }}</p>
-            </div>
-            <div class="rounded-2xl border border-purple-100 bg-purple-50 p-3 shadow-sm">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-purple-600">Verifikasi</p>
-                <p class="mt-1 text-xl font-black text-purple-700">{{ $verificationCount }}</p>
-            </div>
-            <div class="rounded-2xl border border-gray-200 bg-gray-50 p-3 shadow-sm">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Belum masuk</p>
-                <p class="mt-1 text-xl font-black text-gray-700">{{ $notYetEnteredCount }}</p>
-            </div>
-            <div class="rounded-2xl border border-rose-100 bg-rose-50 p-3 shadow-sm">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-rose-600">Alpha</p>
-                <p class="mt-1 text-xl font-black text-rose-700">{{ $alphaCount }}</p>
-            </div>
-        </section>
-        <p class="text-center text-[11px] text-gray-400">Absensi normal tidak mengirim notifikasi individual kepada guru.</p>
-    @endif
+    <section class="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <div class="rounded-2xl border border-amber-100 bg-amber-50 p-3 shadow-sm">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-amber-600">Terlambat</p>
+            <p class="mt-1 text-xl font-black text-amber-700">{{ $lateCount }}</p>
+        </div>
+        <div class="rounded-2xl border border-purple-100 bg-purple-50 p-3 shadow-sm">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-purple-600">Verifikasi</p>
+            <p class="mt-1 text-xl font-black text-purple-700">{{ $verificationCount }}</p>
+        </div>
+        <div class="rounded-2xl border border-gray-200 bg-gray-50 p-3 shadow-sm">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Belum masuk</p>
+            <p class="mt-1 text-xl font-black text-gray-700">{{ $notYetEnteredCount }}</p>
+        </div>
+        <div class="rounded-2xl border border-rose-100 bg-rose-50 p-3 shadow-sm">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-rose-600">Alpha</p>
+            <p class="mt-1 text-xl font-black text-rose-700">{{ $alphaCount }}</p>
+        </div>
+    </section>
+    <p class="text-center text-[11px] text-gray-400">Absensi normal tidak mengirim notifikasi individual kepada guru.</p>
 
     <section class="md:overflow-hidden md:rounded-3xl md:border md:border-gray-100 md:bg-white md:shadow-sm"
              x-data="{
@@ -247,12 +256,12 @@
                         ? $approvedAbsenceLabel
                         : ($approvedDispenRequest
                             ? ($dispenNoCheckInOverdue ? 'Perlu Verifikasi' : 'Hadir')
-                            : ($noCheckInOverdue ? 'Alpha' : 'Belum masuk'));
+                            : (($noCheckInOverdue && $isOperationalDate) ? 'Alpha' : 'Belum masuk'));
                     $noCheckInTone = $approvedNotHadirRequest
                         ? $approvedAbsenceTone
                         : ($dispenNoCheckInOverdue
                             ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'
-                            : ($noCheckInOverdue
+                            : (($noCheckInOverdue && $isOperationalDate)
                                 ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-100'
                                 : ($approvedDispenRequest
                                     ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'

@@ -6,6 +6,7 @@ use App\Models\AcademicYear;
 use App\Models\Attendance;
 use App\Models\Classes;
 use App\Models\Institution;
+use App\Models\Setting;
 use App\Models\StudentDailyAttendance;
 use App\Models\User;
 use App\Services\AttendanceSummaryService;
@@ -70,6 +71,22 @@ class AttendanceSummaryServiceTest extends TestCase
     public function test_resolve_for_date_returns_absent_for_student_with_no_records(): void
     {
         $result = $this->service->resolveForDate([$this->student->id], '2026-08-03');
+
+        $this->assertEquals('absent', $result[$this->student->id]);
+    }
+
+    public function test_resolve_for_date_returns_not_yet_on_non_operational_day(): void
+    {
+        $result = $this->service->resolveForDate([$this->student->id], '2026-08-08');
+
+        $this->assertEquals('not_yet', $result[$this->student->id]);
+    }
+
+    public function test_resolve_for_date_returns_absent_on_non_operational_day_with_override(): void
+    {
+        Setting::set('operational_override_until', '2026-12-31', 'general', $this->institutionId);
+
+        $result = $this->service->resolveForDate([$this->student->id], '2026-08-08');
 
         $this->assertEquals('absent', $result[$this->student->id]);
     }

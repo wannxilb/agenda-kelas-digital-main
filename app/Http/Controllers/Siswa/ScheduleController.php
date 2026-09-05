@@ -112,7 +112,7 @@ class ScheduleController extends Controller
             'schedules' => $schedules,
             'recurringByDay' => $recurringByDay,
             'weekRange' => $weekRange,
-            'weekTypeLabel' => \App\Models\Setting::scheduleMode() === 'block' ? ($this->weekTypesForDate($currentDate)[1] ?? null) : null,
+            'weekTypeLabel' => \App\Models\Setting::scheduleMode() === 'block' ? (\App\Models\Setting::scheduleWeekTypesForDate($currentDate)[0] ?? null) : null,
             'currentDate' => $currentDate->format('Y-m-d'),
             'todayIndex' => $todayIndex,
             'noClass' => false,
@@ -230,23 +230,5 @@ class ScheduleController extends Controller
 
             $schedule->setRelation('teacherStatusForStudent', $status);
         }
-    }
-
-    /**
-     * Menentukan daftar week_type yang berlaku untuk tanggal tertentu
-     * berdasarkan minggu ke-berapa dalam bulan berjalan.
-     *
-     * Minggu ke-1, 3, 5 (ganjil) -> menampilkan 'semua' + 'ganjil'
-     * Minggu ke-2, 4 (genap)    -> menampilkan 'semua' + 'genap'
-     */
-    private function weekTypesForDate(Carbon $date): array
-    {
-        $weekNumber = (int) floor(($date->day - 1) / 7) + 1;
-
-        if ($weekNumber % 2 === 1) {
-            return ['semua', 'ganjil'];
-        }
-
-        return ['semua', 'genap'];
     }
 }

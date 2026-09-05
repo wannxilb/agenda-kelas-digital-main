@@ -97,6 +97,9 @@ class StudentTeacherStatusVisibilityTest extends TestCase
             'room' => 'R1',
             'institution_id' => $this->institutionId,
         ]);
+
+        // Mode 'normal': jadwal 'semua' tampil setiap hari, fokus test pada status guru.
+        \App\Models\Setting::set('schedule_mode', 'normal', 'general', $this->institutionId);
     }
 
     public function test_student_schedule_shows_only_approved_teacher_status(): void

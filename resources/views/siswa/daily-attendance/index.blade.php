@@ -115,9 +115,9 @@
                         {{ $isOperationalDay ? 'Masuk ' . $checkInStart . '-' . $checkInDeadline . '. Pulang mulai ' . $checkoutTime . '.' : $nonOperationalMessage }}
                     </p>
                 </div>
-                <div class="shrink-0 rounded-2xl bg-blue-600 px-3 py-2 text-center text-white shadow-lg shadow-blue-200/60">
+                <div class="shrink-0 rounded-2xl bg-blue-600 px-3 py-2 text-center text-white shadow-lg shadow-blue-200/60" x-data="liveClock(@js($nowTime))">
                     <p class="text-[10px] font-bold uppercase opacity-80">Sekarang</p>
-                    <p class="text-base font-black">{{ $nowTime }}</p>
+                    <p class="text-base font-black tabular-nums" x-text="now">{{ $nowTime }}</p>
                 </div>
             </div>
 
@@ -658,6 +658,31 @@
 
 @push('scripts')
 <script>
+window.liveClock = function (serverTime) {
+    return {
+        now: (serverTime || '00:00').slice(0, 5),
+        offset: 0,
+        interval: null,
+        init() {
+            const [h, m] = this.now.split(':').map(Number);
+            const anchor = new Date();
+            anchor.setHours(h, m, 0, 0);
+            this.offset = Date.now() - anchor.getTime();
+            this.update();
+            this.interval = setInterval(() => this.update(), 1000);
+        },
+        update() {
+            const d = new Date(Date.now() - this.offset);
+            const pad = (n) => String(n).padStart(2, '0');
+            this.now = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+        },
+        destroy() {
+            if (this.interval) {
+                clearInterval(this.interval);
+            }
+        }
+    };
+};
 window.cameraAttendance = function(locationRequired) {
     return {
         stream: null,

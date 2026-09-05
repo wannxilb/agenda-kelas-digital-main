@@ -88,10 +88,10 @@ class StudentScheduleWeekFilterTest extends TestCase
     }
 
     /**
-     * Pada minggu ganjil (hari ke-1 s.d. 7 dalam bulan), jadwal 'semua' + 'ganjil'
-     * tampil, sedangkan jadwal 'genap' TIDAK tampil.
+     * Pada minggu ganjil (ke-11 dari awal tahun ajaran), hanya jadwal 'ganjil'
+     * yang tampil. Jadwal 'semua' dan 'genap' TIDAK tampil.
      */
-    public function test_odd_week_shows_semua_and_ganjil_only(): void
+    public function test_odd_week_shows_ganjil_only(): void
     {
         $this->withoutExceptionHandling();
         // create 'semua' Monday schedule
@@ -100,24 +100,24 @@ class StudentScheduleWeekFilterTest extends TestCase
         $this->makeSchedule($this->subjectGanjil->id, 'ganjil');
         $this->makeSchedule($this->subjectGenap->id, 'genap');
 
-        // tanggal dengan hari ke-1 (minggu ke-1 = ganjil), pastikan itu Monday? Tak apa,
-        // view menampilkan seluruh minggu. Kita cek kolom Monday.
-        $date = Carbon::parse('2026-09-01'); // 1 Sept 2026, minggu ke-1 = ganjil
+        // Tahun ajaran mulai 2026-07-01 → anchor Senin 2026-06-29.
+        // 7 Sept 2026 = Senin, minggu ke-11 = ganjil.
+        $date = Carbon::parse('2026-09-07');
 
         $response = $this->actingAs($this->student)
             ->get(route('siswa.schedule.index', ['date' => $date->format('Y-m-d')]));
 
         $response->assertOk();
-        $response->assertSee('Semua Minggu Mapel');
+        $response->assertDontSee('Semua Minggu Mapel');
         $response->assertSee('Matematika Ganjil');
         $response->assertDontSee('Fisika Genap');
     }
 
     /**
-     * Pada minggu genap (hari ke-8 s.d. 14 dalam bulan), jadwal 'semua' + 'genap'
-     * tampil, sedangkan jadwal 'ganjil' TIDAK tampil.
+     * Pada minggu genap (ke-12 dari awal tahun ajaran), hanya jadwal 'genap'
+     * yang tampil. Jadwal 'semua' dan 'ganjil' TIDAK tampil.
      */
-    public function test_even_week_shows_semua_and_genap_only(): void
+    public function test_even_week_shows_genap_only(): void
     {
         $this->withoutExceptionHandling();
         $semua = Subject::create(['name' => 'Semua Minggu Mapel', 'institution_id' => $this->institutionId]);
@@ -125,13 +125,14 @@ class StudentScheduleWeekFilterTest extends TestCase
         $this->makeSchedule($this->subjectGanjil->id, 'ganjil');
         $this->makeSchedule($this->subjectGenap->id, 'genap');
 
-        $date = Carbon::parse('2026-09-08'); // 8 Sept 2026, minggu ke-2 = genap
+        // 14 Sept 2026 = Senin, minggu ke-12 = genap.
+        $date = Carbon::parse('2026-09-14');
 
         $response = $this->actingAs($this->student)
             ->get(route('siswa.schedule.index', ['date' => $date->format('Y-m-d')]));
 
         $response->assertOk();
-        $response->assertSee('Semua Minggu Mapel');
+        $response->assertDontSee('Semua Minggu Mapel');
         $response->assertSee('Fisika Genap');
         $response->assertDontSee('Matematika Ganjil');
     }
@@ -141,13 +142,13 @@ class StudentScheduleWeekFilterTest extends TestCase
      */
     public function test_week_type_label_is_rendered_in_header(): void
     {
-        $dateGanjil = Carbon::parse('2026-09-03'); // minggu ganjil
+        $dateGanjil = Carbon::parse('2026-09-07'); // minggu ganjil (ke-11)
         $response = $this->actingAs($this->student)
             ->get(route('siswa.schedule.index', ['date' => $dateGanjil->format('Y-m-d')]));
         $response->assertOk();
         $response->assertSee('Minggu Ganjil', false);
 
-        $dateGenap = Carbon::parse('2026-09-10'); // minggu genap
+        $dateGenap = Carbon::parse('2026-09-14'); // minggu genap (ke-12)
         $response = $this->actingAs($this->student)
             ->get(route('siswa.schedule.index', ['date' => $dateGenap->format('Y-m-d')]));
         $response->assertOk();
@@ -162,13 +163,13 @@ class StudentScheduleWeekFilterTest extends TestCase
         $ganjil = $this->makeSchedule($this->subjectGanjil->id, 'ganjil');
         $genap = $this->makeSchedule($this->subjectGenap->id, 'genap');
 
-        // 7 Sept 2026 = Senin, minggu ke-1 = ganjil
+        // 7 Sept 2026 = Senin, minggu ke-11 = ganjil
         $response = $this->actingAs($this->student)
             ->getJson(route('siswa.schedule.by-date', ['date' => '2026-09-07']));
         $response->assertOk()->assertJsonCount(1);
         $response->assertJsonPath('0.subject_name', 'Matematika Ganjil');
 
-        // 14 Sept 2026 = Senin, minggu ke-2 = genap
+        // 14 Sept 2026 = Senin, minggu ke-12 = genap
         $response = $this->actingAs($this->student)
             ->getJson(route('siswa.schedule.by-date', ['date' => '2026-09-14']));
         $response->assertOk()->assertJsonCount(1);
@@ -176,28 +177,31 @@ class StudentScheduleWeekFilterTest extends TestCase
     }
 
     /**
-     * Mode 'normal': semua jadwal (semua + ganjil + genap) tampil tanpa peduli minggu.
+     * Mode 'normal': hanya jadwal 'semua' yang tampil, jadwal ganjil/genap diabaikan.
      */
-    public function test_normal_mode_shows_all_schedules_any_week(): void
+    public function test_normal_mode_shows_semua_only(): void
     {
         \App\Models\Setting::set('schedule_mode', 'normal', 'general', $this->institutionId);
 
+        $semua = Subject::create(['name' => 'Semua Minggu Mapel', 'institution_id' => $this->institutionId]);
+        $this->makeSchedule($semua->id, 'semua');
         $this->makeSchedule($this->subjectGanjil->id, 'ganjil');
         $this->makeSchedule($this->subjectGenap->id, 'genap');
 
-        // minggu genap (hari ke-9), tapi karena mode normal semua tetap tampil
-        $date = Carbon::parse('2026-09-09');
+        // minggu ganjil (ke-11), tapi karena mode normal tetap tampil hanya 'semua'
+        $date = Carbon::parse('2026-09-07');
 
         $response = $this->actingAs($this->student)
             ->get(route('siswa.schedule.index', ['date' => $date->format('Y-m-d')]));
 
         $response->assertOk();
-        $response->assertSee('Matematika Ganjil');
-        $response->assertSee('Fisika Genap');
+        $response->assertSee('Semua Minggu Mapel');
+        $response->assertDontSee('Matematika Ganjil');
+        $response->assertDontSee('Fisika Genap');
     }
 
     /**
-     * Mode 'block' default: jadwal 'ganjil' TIDAK tampil di minggu genap.
+     * Mode 'block': jadwal 'ganjil' TIDAK tampil di minggu genap.
      */
     public function test_block_mode_still_filters(): void
     {
@@ -206,7 +210,8 @@ class StudentScheduleWeekFilterTest extends TestCase
         $this->makeSchedule($this->subjectGanjil->id, 'ganjil');
         $this->makeSchedule($this->subjectGenap->id, 'genap');
 
-        $date = Carbon::parse('2026-09-09'); // minggu genap
+        // 14 Sept 2026 = minggu genap (ke-12)
+        $date = Carbon::parse('2026-09-14');
 
         $response = $this->actingAs($this->student)
             ->get(route('siswa.schedule.index', ['date' => $date->format('Y-m-d')]));
@@ -214,5 +219,44 @@ class StudentScheduleWeekFilterTest extends TestCase
         $response->assertOk();
         $response->assertDontSee('Matematika Ganjil');
         $response->assertSee('Fisika Genap');
+    }
+
+    /**
+     * Semester genap (Januari-Juni) menghitung ulang ganjil/genap dari 1 Januari,
+     * tidak meneruskan hitungan semester ganjil (Juli). Dengan begitu minggu tetap
+     * konsisten dan bergantian seperti di semester ganjil.
+     */
+    public function test_genap_semester_restarts_week_counting(): void
+    {
+        \App\Models\Setting::set('schedule_mode', 'block', 'general', $this->institutionId);
+
+        // Semester genap tahun ajaran yang sama.
+        AcademicYear::create([
+            'name' => '2026/2027',
+            'semester' => 'Genap',
+            'start_date' => '2027-01-01',
+            'end_date' => '2027-06-30',
+            'is_active' => true,
+            'institution_id' => $this->institutionId,
+        ]);
+
+        $this->makeSchedule($this->subjectGanjil->id, 'ganjil');
+        $this->makeSchedule($this->subjectGenap->id, 'genap');
+
+        // 4 Jan 2027 (Senin) = minggu ke-2 semester genap (anchor Senin 28 Des 2026) -> genap.
+        $response = $this->actingAs($this->student)
+            ->get(route('siswa.schedule.index', ['date' => '2027-01-04']));
+
+        $response->assertOk();
+        $response->assertDontSee('Matematika Ganjil');
+        $response->assertSee('Fisika Genap');
+
+        // 11 Jan 2027 (Senin) = minggu ke-3 semester genap -> ganjil.
+        $response = $this->actingAs($this->student)
+            ->get(route('siswa.schedule.index', ['date' => '2027-01-11']));
+
+        $response->assertOk();
+        $response->assertSee('Matematika Ganjil');
+        $response->assertDontSee('Fisika Genap');
     }
 }
