@@ -14,6 +14,11 @@ trait ResolvesSekretarisClassContext
     {
         $user = Auth::user();
         $currentClass = $user->class_id ? Classes::find($user->class_id) : null;
+
+        if ($user->class_id && ! $currentClass) {
+            $currentClass = Classes::withoutGlobalScopes()->find($user->class_id);
+        }
+
         $availableClasses = $user->classHistories()
             ->with('class')
             ->get()
@@ -25,7 +30,7 @@ trait ResolvesSekretarisClassContext
             ->sortBy([['grade_level', 'asc'], ['name', 'asc']])
             ->values();
 
-        $requestedClassId = $request->query('class_id');
+        $requestedClassId = $request->query('class_id') ?: $request->input('class_id');
         $selectedClass = $requestedClassId
             ? $availableClasses->firstWhere('id', (int) $requestedClassId)
             : null;

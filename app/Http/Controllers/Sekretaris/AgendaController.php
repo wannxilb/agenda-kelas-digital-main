@@ -91,9 +91,11 @@ class AgendaController extends Controller
         ));
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        $classId = Auth::user()->class_id;
+        $context = $this->sekretarisClassContext($request);
+        $classId = $context['selectedClassId'];
+
         if (! $classId) {
             return redirect()->route('sekretaris.dashboard')->with('error', 'Anda belum terdaftar di kelas manapun.');
         }
@@ -114,6 +116,7 @@ class AgendaController extends Controller
             ->where('day', $today)
             ->whereIn('week_type', Setting::scheduleWeekTypesForDate($todayDate))
             ->with(['subject', 'teacher', 'room_model'])
+            ->orderBy('start_time')
             ->get();
 
         // Fallback: if no schedule today, show all subjects/rooms/teachers for this class
@@ -123,6 +126,9 @@ class AgendaController extends Controller
                 $q->where('class_id', $classId);
             })->with('teachers')->get();
         }
+
+        // Order subjects to match the class schedule (by day then start time)
+        $subjects = $this->orderSubjectsBySchedule($subjects, $todaySchedules, $classId);
 
         $scheduleRooms = $todaySchedules->filter(function ($s) {
             $room = $s->room_model ? $s->room_model->name : ($s->room ?? '');
@@ -180,7 +186,7 @@ class AgendaController extends Controller
             $scheduleTeachers = $teachers->map(fn ($t) => ['id' => $t->id, 'name' => $t->name])->values();
         }
 
-        return view('sekretaris.agenda.create', compact('classes', 'subjects', 'teachers', 'scheduleRooms', 'allRooms', 'scheduleData', 'scheduleTeachers'));
+        return view('sekretaris.agenda.create', compact('classes', 'subjects', 'teachers', 'scheduleRooms', 'allRooms', 'scheduleData', 'scheduleTeachers') + ['selectedClassId' => $classId]);
     }
 
     /**
@@ -188,7 +194,9 @@ class AgendaController extends Controller
      */
     public function getScheduleInfo(Request $request)
     {
-        $classId = Auth::user()->class_id;
+        $context = $this->sekretarisClassContext($request);
+        $classId = $context['selectedClassId'];
+
         if (! $classId) {
             return response()->json(['error' => 'No class assigned'], 403);
         }
@@ -264,6 +272,13 @@ class AgendaController extends Controller
 
     public function store(Request $request)
     {
+        $context = $this->sekretarisClassContext($request);
+        $classId = $context['selectedClassId'];
+
+        if (! $classId) {
+            return redirect()->route('sekretaris.dashboard')->with('error', 'Data kelas tidak ditemukan.');
+        }
+
         $institutionId = Auth::user()->institution_id;
         $subjectExistsRule = Rule::exists('subjects', 'id');
         $teacherExistsRule = Rule::exists('users', 'id');
@@ -295,7 +310,7 @@ class AgendaController extends Controller
 
         // Cek apakah agenda sudah ada
         $existsQuery = Agenda::where('teacher_id', $request->teacher_id)
-            ->where('class_id', Auth::user()->class_id)
+            ->where('class_id', $classId)
             ->where('date', $request->date);
 
         if ($request->subject_id) {
@@ -312,7 +327,7 @@ class AgendaController extends Controller
 
         $dayName = Carbon::parse($request->date)->format('l');
         $scheduleQuery = Schedule::withoutGlobalScopes()
-            ->where('class_id', Auth::user()->class_id)
+            ->where('class_id', $classId)
             ->where('teacher_id', $request->teacher_id)
             ->where('day', $dayName)
             ->whereIn('week_type', Setting::scheduleWeekTypesForDate(Carbon::parse($request->date)));
@@ -334,7 +349,7 @@ class AgendaController extends Controller
         }
 
         $data = $request->only(['teacher_id', 'subject_id', 'room', 'date', 'title', 'description', 'status']);
-        $data['class_id'] = Auth::user()->class_id;
+        $data['class_id'] = $classId;
         $data['institution_id'] = Auth::user()->institution_id;
 
         if ($request->hasFile('attachment')) {
@@ -347,17 +362,22 @@ class AgendaController extends Controller
 
         Agenda::create($data);
 
-        return redirect()->route('sekretaris.agenda.index')
+        $redirectClass = ((int) $classId !== (int) Auth::user()->class_id) ? ['class_id' => $classId] : [];
+
+        return redirect()->route('sekretaris.agenda.index', $redirectClass)
             ->with('success', 'Agenda berhasil dibuat!');
     }
 
     public function edit(Agenda $agenda)
     {
-        $classId = Auth::user()->class_id;
-        if ((int) $agenda->class_id !== (int) $classId) {
+        $context = $this->sekretarisClassContext(request());
+        $classIds = $context['availableClasses']->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        if (! in_array((int) $agenda->class_id, $classIds)) {
             abort(403, 'Unauthorized action.');
         }
 
+        $classId = (int) $agenda->class_id;
         $classes = Classes::where('id', $classId)->get();
         $dayName = Carbon::parse($agenda->date)->format('l');
 
@@ -379,7 +399,11 @@ class AgendaController extends Controller
             ->where('day', $dayName)
             ->whereIn('week_type', Setting::scheduleWeekTypesForDate(Carbon::parse($agenda->date)))
             ->with(['subject', 'teacher', 'room_model'])
+            ->orderBy('start_time')
             ->get();
+
+        // Order subjects by schedule start time for initial dropdown
+        $subjects = $this->orderSubjectsBySchedule($subjects, $daySchedules, $classId);
 
         $scheduleRooms = $daySchedules->filter(function ($s) {
             $room = $s->room_model ? $s->room_model->name : ($s->room ?? '');
@@ -421,10 +445,14 @@ class AgendaController extends Controller
 
     public function update(Request $request, Agenda $agenda)
     {
-        if ((int) $agenda->class_id !== (int) Auth::user()->class_id) {
+        $context = $this->sekretarisClassContext($request);
+        $classIds = $context['availableClasses']->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        if (! in_array((int) $agenda->class_id, $classIds)) {
             abort(403);
         }
 
+        $classId = (int) $agenda->class_id;
         $institutionId = Auth::user()->institution_id;
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
@@ -449,7 +477,7 @@ class AgendaController extends Controller
 
         // Cek duplikat (kecuali untuk agenda yang sedang diupdate)
         $existsQuery = Agenda::where('teacher_id', $request->teacher_id)
-            ->where('class_id', Auth::user()->class_id)
+            ->where('class_id', $classId)
             ->where('date', $request->date)
             ->where('id', '!=', $agenda->id);
 
@@ -464,7 +492,7 @@ class AgendaController extends Controller
         }
 
         $dayName = Carbon::parse($request->date)->format('l');
-        $scheduleQuery = Schedule::where('class_id', Auth::user()->class_id)
+        $scheduleQuery = Schedule::where('class_id', $classId)
             ->where('teacher_id', $request->teacher_id)
             ->where('day', $dayName)
             ->whereIn('week_type', Setting::scheduleWeekTypesForDate(Carbon::parse($request->date)));
@@ -486,7 +514,7 @@ class AgendaController extends Controller
         }
 
         $data = $request->only(['teacher_id', 'subject_id', 'room', 'date', 'title', 'description', 'status']);
-        $data['class_id'] = Auth::user()->class_id;
+        $data['class_id'] = $classId;
         $data['institution_id'] = Auth::user()->institution_id;
 
         if ($request->hasFile('attachment')) {
@@ -503,13 +531,16 @@ class AgendaController extends Controller
 
         $agenda->update($data);
 
-        return redirect()->route('sekretaris.agenda.index')
+        return redirect()->route('sekretaris.agenda.index', array_filter(['class_id' => $classId]))
             ->with('success', 'Agenda berhasil diperbarui!');
     }
 
     public function destroy(Agenda $agenda)
     {
-        if ((int) $agenda->class_id !== (int) Auth::user()->class_id) {
+        $context = $this->sekretarisClassContext(request());
+        $classIds = $context['availableClasses']->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        if (! in_array((int) $agenda->class_id, $classIds)) {
             abort(403);
         }
 
@@ -518,7 +549,7 @@ class AgendaController extends Controller
         }
         $agenda->delete();
 
-        return redirect()->route('sekretaris.agenda.index')
+        return redirect()->route('sekretaris.agenda.index', array_filter(['class_id' => request('class_id')]))
             ->with('success', 'Agenda berhasil dihapus!');
     }
 
@@ -593,5 +624,36 @@ class AgendaController extends Controller
         }
 
         return 'Agenda hanya dapat diisi saat jadwal pelajaran sedang berlangsung.';
+    }
+
+    /**
+     * Urutkan koleksi mata pelajaran agar sesuai dengan urutan jadwal kelas
+     * (berdasarkan hari, lalu jam mulai). Jika $schedules kosong/fallback,
+     * urutan memakai seluruh jadwal kelas sehingga dropdown tetap tertib.
+     */
+    private function orderSubjectsBySchedule($subjects, $schedules, int $classId): Collection
+    {
+        $subjects = collect($subjects);
+        $dayOrder = ['Monday' => 1, 'Tuesday' => 2, 'Wednesday' => 3, 'Thursday' => 4, 'Friday' => 5];
+
+        if ($schedules === null || $schedules->isEmpty()) {
+            $schedules = Schedule::where('class_id', $classId)
+                ->orderBy('day')
+                ->orderBy('start_time')
+                ->get();
+        }
+
+        $orderKeys = [];
+        foreach ($schedules as $schedule) {
+            $time = (int) str_replace(':', '', $schedule->start_time ?? '000000');
+            $key = (($dayOrder[$schedule->day] ?? 99) * 100000) + $time;
+            if (! isset($orderKeys[$schedule->subject_id]) || $key < $orderKeys[$schedule->subject_id]) {
+                $orderKeys[$schedule->subject_id] = $key;
+            }
+        }
+
+        return $subjects->sortBy(function ($subject) use ($orderKeys) {
+            return $orderKeys[$subject->id] ?? PHP_INT_MAX;
+        })->values();
     }
 }

@@ -369,7 +369,7 @@
 
         const subjectTom = new TomSelect('#subject_id', {
             create: false,
-            sortField: { field: 'text', direction: 'asc' },
+            sortField: false,
             placeholder: 'Cari Mata Pelajaran...',
             maxOptions: null,
         });
@@ -421,6 +421,7 @@
             subjects.forEach(function(s) {
                 subjectTom.addOption({ value: s.id, text: s.name });
             });
+            subjectTom.settings.sortField = false;
             if (prevVal && subjects.some(function(s) { return String(s.id) === String(prevVal); })) {
                 subjectTom.setValue(prevVal, true);
             } else {

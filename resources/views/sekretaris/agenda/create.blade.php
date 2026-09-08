@@ -29,6 +29,7 @@
 
     <form id="agendaForm" action="{{ route('sekretaris.agenda.store') }}" method="POST" enctype="multipart/form-data" class="space-y-8">
         @csrf
+        <input type="hidden" name="class_id" value="{{ $selectedClassId ?? '' }}">
         @include('partials.agenda-location-fields')
         
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
@@ -223,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const subjectTom = new TomSelect('#subject_id', {
         create: false,
         placeholder: 'Cari Mata Pelajaran...',
-        sortField: { field: 'text', direction: 'asc' },
+        sortField: false,
         maxOptions: null,
     });
     const roomTom = new TomSelect('#room', {
@@ -285,7 +286,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         subjectTom.off('change');
 
-        fetch(API_URL + '?date=' + date)
+        const params = new URLSearchParams({ date: date });
+        @if(isset($selectedClassId) && $selectedClassId)
+        params.set('class_id', '{{ $selectedClassId }}');
+        @endif
+
+        fetch(API_URL + '?' + params.toString())
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 subjectTeacherMap = {};

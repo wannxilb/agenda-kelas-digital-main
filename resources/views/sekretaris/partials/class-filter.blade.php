@@ -5,7 +5,7 @@
     $currentClassId = (int) ($selectedClassId ?? 0);
 @endphp
 
-<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-visible">
     <div class="flex items-center gap-3 sm:gap-4 p-4 sm:p-5">
         <div class="w-11 h-11 sm:w-12 sm:h-12 shrink-0 bg-linear-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200/50">
             <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,7 +41,7 @@
                      x-transition:leave="transition ease-in duration-100"
                      x-transition:leave-start="opacity-100 scale-100 translate-y-0"
                      x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
-                     class="absolute right-0 top-full mt-2 w-56 z-50 bg-white rounded-xl border border-gray-100 shadow-xl overflow-hidden">
+                     class="absolute right-0 top-full mt-2 w-56 z-[100] bg-white rounded-xl border border-gray-100 shadow-xl overflow-hidden">
                     <form method="GET" action="{{ url()->current() }}">
                         @foreach($queryWithoutClass as $key => $value)
                             @if(is_array($value))

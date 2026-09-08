@@ -129,6 +129,7 @@ class AgendaController extends Controller
 
         $allSchedules = Schedule::where('teacher_id', $teacher->id)
             ->with(['class', 'subject'])
+            ->orderBy('start_time')
             ->get();
 
         $classes = $allSchedules->pluck('class')->unique('id')->values();

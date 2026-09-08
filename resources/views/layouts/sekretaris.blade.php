@@ -515,7 +515,7 @@
                         @if($i === 2)
                             {{-- Center FAB --}}
                             @feature('agenda_harian')
-                            <a href="{{ route('sekretaris.agenda.create') }}"
+                            <a href="{{ route('sekretaris.agenda.create', array_filter(['class_id' => request('class_id')])) }}"
                                class="relative flex flex-col items-center justify-center -mt-5 w-14">
                                 <span class="flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-200 active:scale-95 transition-transform">
                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">

@@ -21,7 +21,7 @@
                     Kelola daftar agenda harian, ringkasan materi, dan tugas kelas.
                 </p>
             </div>
-            <a href="{{ route('sekretaris.agenda.create') }}"
+            <a href="{{ route('sekretaris.agenda.create', array_filter(['class_id' => $selectedClassId ?? null])) }}"
                class="hidden sm:inline-flex shrink-0 items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-linear-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg shadow-blue-500/20 hover:from-blue-700 hover:to-indigo-700 active:scale-95 transition-all uppercase tracking-widest">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                 Buat Agenda
@@ -319,7 +319,7 @@
 </div>
 
 {{-- Floating Action Button (mobile only) --}}
-<a href="{{ route('sekretaris.agenda.create') }}"
+<a href="{{ route('sekretaris.agenda.create', array_filter(['class_id' => $selectedClassId ?? null])) }}"
    class="sm:hidden fixed bottom-24 right-5 z-40 w-14 h-14 flex items-center justify-center bg-linear-to-br from-blue-600 to-indigo-600 text-white rounded-2xl shadow-xl shadow-blue-500/30 active:scale-90 transition-transform"
    aria-label="Buat Agenda">
     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>

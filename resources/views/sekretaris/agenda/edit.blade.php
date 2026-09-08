@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const subjectTom = new TomSelect('#subject_id', {
         create: false,
         placeholder: 'Cari Mata Pelajaran...',
-        sortField: { field: 'text', direction: 'asc' },
+        sortField: false,
         maxOptions: null,
     });
     const roomTom = new TomSelect('#room', {
@@ -271,7 +271,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function fetchScheduleInfo(date) {
         if (!date) return;
-        fetch(API_URL + '?date=' + date)
+        const params = new URLSearchParams({ date: date });
+        params.set('class_id', '{{ $agenda->class_id }}');
+        fetch(API_URL + '?' + params.toString())
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 subjectTeacherMap = {};
