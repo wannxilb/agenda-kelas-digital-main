@@ -6,9 +6,13 @@
 !.env.e2e.example
 !.env.testing.example
 !.env.production.example
+.env.e2e
+.env.testing
+.env.production
 backup.sql
 *.sql
 cloudflared.exe
+users.json
 
 # Dependencies & build artifacts
 /node_modules
@@ -39,3 +43,26 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+.phpunit.result.cache
+
+# Debug scripts & one-off tools (root level)
+/check_*.php
+/cleanup_*.php
+/delete_*.php
+/find_*.php
+/fix_*.php
+/get_*.php
+/inspect_*.php
+/list_*.php
+/populate_*.php
+/reactivate_*.php
+/tmp_*.php
+
+# Temp / dev files
+import-output.txt
+penjelasan-perbaikan-absensi.txt
+TESTING_ABSENSI_HARIAN.txt
+test_modal.html
+install.cmd
+mulai.bat
+wrap_worker*.bat
