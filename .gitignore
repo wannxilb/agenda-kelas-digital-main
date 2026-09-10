@@ -19,6 +19,7 @@ users.json
 /vendor
 /public/build
 /public/hot
+/public/storage
 
 # Laravel runtime (folder tetap ada, isinya diabaikan)
 /bootstrap/cache/*.php

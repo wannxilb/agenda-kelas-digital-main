@@ -295,7 +295,7 @@ Setiap modul bisa diaktifkan/nonaktifkan per instansi melalui pengaturan Super A
 - PHP >= 8.2
 - Composer
 - Node.js & NPM
-- MySQL / MariaDB
+- PostgreSQL
 
 ### Langkah
 
@@ -317,11 +317,11 @@ cp .env.example .env
 php artisan key:generate
 
 # 6. Konfigurasi database di .env
-# DB_CONNECTION=mysql
+# DB_CONNECTION=pgsql
 # DB_HOST=127.0.0.1
-# DB_PORT=3306
+# DB_PORT=5432
 # DB_DATABASE=agenda_kelas_digital
-# DB_USERNAME=root
+# DB_USERNAME=postgres
 # DB_PASSWORD=
 
 # 7. Jalankan migrasi & seed

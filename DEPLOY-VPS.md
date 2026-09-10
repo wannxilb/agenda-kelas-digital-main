@@ -25,7 +25,7 @@ Estimasi disk: foto absen terenkripsi ±10–15 GB/bulan (2.000 siswa × 2 foto 
 Browser (HTTPS)
    └── Nginx (reverse proxy + static)
          └── PHP-FPM 8.2 (pool aplikasi)
-               ├── MySQL/MariaDB (data)
+               ├── PostgreSQL (data)
                ├── Redis (session + cache + queue)   ← KUNCI untuk 2.000 user
                └── Supervisor
                      ├── queue:work (2–4 worker, notifikasi WA)
@@ -40,12 +40,12 @@ Browser (HTTPS)
 sudo apt update && sudo apt upgrade -y
 
 # Nginx + PHP 8.2 + ekstensi
-sudo apt install -y nginx php8.2-fpm php8.2-cli php8.2-mysql php8.2-mbstring \
+sudo apt install -y nginx php8.2-fpm php8.2-cli php8.2-pgsql php8.2-mbstring \
      php8.2-xml php8.2-curl php8.2-gd php8.2-zip php8.2-bcmath php8.2-intl \
      php8.2-redis php8.2-opcache
 
-# MySQL / MariaDB + Redis + Supervisor + utilitas
-sudo apt install -y mysql-server redis-server supervisor composer git unzip certbot python3-certbot-nginx
+# PostgreSQL + Redis + Supervisor + utilitas
+sudo apt install -y postgresql redis-server supervisor composer git unzip certbot python3-certbot-nginx
 ```
 
 Cek versi PHP (harus ≥ 8.2):
@@ -55,38 +55,40 @@ php -v
 
 ---
 
-## 4. Setup MySQL
+## 4. Setup PostgreSQL
 
 ```bash
-sudo mysql
+sudo -u postgres psql
 ```
 
 ```sql
--- Buat database & user khusus aplikasi (JANGAN pakai root untuk aplikasi)
-CREATE DATABASE agenda_kelas CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'agenda_app'@'localhost' IDENTIFIED BY 'PASSWORD_KUAT';
-GRANT ALL PRIVILEGES ON agenda_kelas.* TO 'agenda_app'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-```
-
-### Tuning MySQL (`/etc/mysql/mysql.conf.d/99-tuning.cnf`)
-
-```ini
-[mysqld]
-# 50–60% dari RAM. Contoh untuk 8 GB RAM:
-innodb_buffer_pool_size = 4G
-innodb_log_file_size = 256M
-innodb_flush_log_at_trx_commit = 2
-# max_connections cukup 150–300
-max_connections = 200
-# Timeout request PHP yang panjang (export laporan)
-wait_timeout = 120
-interactive_timeout = 300
+-- Buat user & database khusus aplikasi (JANGAN pakai postgres/superuser untuk aplikasi)
+CREATE ROLE agenda_app WITH LOGIN PASSWORD 'PASSWORD_KUAT';
+CREATE DATABASE agenda_kelas OWNER agenda_app;
+\q
 ```
 
 ```bash
-sudo systemctl restart mysql
+# Set password untuk user agenda_app bila perlu
+sudo -u postgres psql -c "ALTER ROLE agenda_app WITH PASSWORD 'PASSWORD_KUAT';"
+```
+
+### Tuning PostgreSQL (`/etc/postgresql/<versi>/main/postgresql.conf`)
+
+```ini
+# 25% dari RAM. Contoh untuk 8 GB RAM:
+shared_buffers = 2G
+# 50–75% dari RAM (estimasi cache OS)
+effective_cache_size = 6G
+# Memory per operasi sorting/hash (export laporan besar)
+work_mem = 64MB
+maintenance_work_mem = 512MB
+# max_connections cukup 150–300
+max_connections = 200
+```
+
+```bash
+sudo systemctl restart postgresql
 ```
 
 ---
@@ -137,6 +139,9 @@ php artisan migrate --force
 php artisan db:seed --force      # HANYA kalau database masih kosong
 
 # 6. Storage & permission
+# Wajib hapus public/storage dulu (file .gitignore di-repo membuat folder ini ter-cipta
+# saat clone), supaya symlink bisa dibuat.
+rm -rf public/storage
 php artisan storage:link
 sudo chown -R www-data:www-data storage bootstrap/cache
 sudo chmod -R 775 storage bootstrap/cache
@@ -327,7 +332,7 @@ Manual (via browser):
 - [ ] Halaman **Laporan Presensi** → load cepat (default bulan berjalan + cache)
 - [ ] Coba **absensi siswa** (check-in foto + lokasi) → sukses & notifikasi WA terkirim
 - [ ] Export PDF/Excel laporan → jalan
-- [ ] `php artisan about` → cek env/redis/mysql terkoneksi benar
+- [ ] `php artisan about` → cek env/redis/postgres terkoneksi benar
 - [ ] `.env`: `APP_DEBUG=false` dan `SESSION_SECURE_COOKIE=true`
 
 ---
@@ -336,7 +341,7 @@ Manual (via browser):
 
 ```bash
 # Backup database harian (via cron/systemd timer)
-mysqldump -u agenda_app -p agenda_kelas | gzip > /backup/agenda_$(date +%F).sql.gz
+pg_dump -U agenda_app -h 127.0.0.1 agenda_kelas | gzip > /backup/agenda_$(date +%F).sql.gz
 ```
 
 - Paket `spatie/laravel-backup` sudah terpasang di `composer.json` — bisa diaktifkan dengan `php artisan vendor:publish --provider="Spatie\LaravelBackup\BackupServiceProvider"` lalu atur schedule.
