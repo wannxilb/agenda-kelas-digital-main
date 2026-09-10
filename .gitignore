@@ -1,54 +1,41 @@
-# Laravel-specific ignores
+# Sensitive
 *.key
 .env
-.env.local
 .env.*
 !.env.example
 !.env.e2e.example
 !.env.testing.example
+!.env.production.example
+backup.sql
+*.sql
+cloudflared.exe
 
-# Build and cache directories
-bootstrap/cache/
-storage/logs/
-storage/framework/cache/
-storage/framework/sessions/
-storage/framework/views/
-vendor/
+# Dependencies & build artifacts
+/node_modules
+/vendor
+/public/build
+/public/hot
 
-# Compiled PHP files
-*.php~
+# Laravel runtime (folder tetap ada, isinya diabaikan)
+/bootstrap/cache/*.php
+/storage/logs/*.log
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
 
-# IDE and editor files
+# IDE / OS
 .vscode/
 .idea/
 *.swp
 *.swo
 *.tmp
-
-# OS generated files
 .DS_Store
 Thumbs.db
 
-# Log files
-*.log
-
-# Coverage reports
+# Testing
 coverage/
 htmlcov/
-
-# Legacy build artifacts (if any)
-dist/
-build/
-target/
-
-# Playwright (E2E test)
 test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
-
-# Sensitive files
-backup.sql
-*.sql
-cloudflared.exe
-/public/**/*.php
