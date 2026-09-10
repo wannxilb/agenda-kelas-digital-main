@@ -217,6 +217,9 @@ class SettingController extends Controller
     {
         $zip = new \ZipArchive();
         $filename = 'backup-files-' . date('Y-m-d_H-i-s') . '.zip';
+        if (!is_dir(storage_path('app/backups'))) {
+            mkdir(storage_path('app/backups'), 0755, true);
+        }
         $path = storage_path('app/backups/' . $filename);
 
         if ($zip->open($path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
@@ -241,6 +244,13 @@ class SettingController extends Controller
         }
 
         $zip->close();
+
+        // ZipArchive (terutama di Windows) tidak membuat/menghapus file fisik
+        // ketika tidak ada entry yang ditambahkan. Tulis ZIP kosong yang valid
+        // agar download tidak error 500 pada storage yang kosong.
+        if (!file_exists($path)) {
+            file_put_contents($path, "\x50\x4b\x05\x06" . str_repeat("\x00", 18));
+        }
 
         return response()->download($path)->deleteFileAfterSend(true);
     }
