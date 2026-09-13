@@ -142,7 +142,6 @@ class TeachersImport implements ToCollection
                     $subject = Subject::firstOrCreate(
                         ['name' => $subjectName, 'institution_id' => $institutionId],
                         [
-                            'code' => strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $subjectName), 0, 5)) . '-' . rand(100, 999),
                             'credit_hours' => 2, // Default JP
                             'institution_id' => $institutionId,
                         ]

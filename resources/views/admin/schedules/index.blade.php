@@ -74,6 +74,94 @@
         </div>
     </div>
 
+    {{-- Hasil Import --}}
+    @if(session('import_report'))
+        @php
+            $report = session('import_report');
+            $summary = $report['summary']['categories'] ?? [];
+            $categoryLabels = $report['summary']['categoryLabels'] ?? [];
+            $hasIssues = ($report['skipped'] ?? 0) > 0;
+            $colorMap = [
+                'kuning'  => ['bg' => 'bg-amber-50', 'border' => 'border-amber-200', 'text' => 'text-amber-800', 'badge' => 'bg-amber-100 text-amber-800'],
+                'merah'   => ['bg' => 'bg-red-50',   'border' => 'border-red-200',   'text' => 'text-red-800',   'badge' => 'bg-red-100 text-red-800'],
+                'oranye'  => ['bg' => 'bg-orange-50','border' => 'border-orange-200','text' => 'text-orange-800','badge' => 'bg-orange-100 text-orange-800'],
+                'abu'     => ['bg' => 'bg-gray-50',  'border' => 'border-gray-200',  'text' => 'text-gray-700',  'badge' => 'bg-gray-100 text-gray-700'],
+            ];
+        @endphp
+        <div x-data="{ open: false }" class="import-report rounded-2xl border shadow-sm overflow-hidden {{ $hasIssues ? 'border-amber-200 bg-amber-50/60' : 'border-green-200 bg-green-50/60' }}">
+            <div class="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center {{ $hasIssues ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600' }}">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            @if($hasIssues)
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            @else
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            @endif
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <h2 class="text-sm font-bold text-gray-900 {{ $hasIssues ? '' : '' }}">Hasil Import Jadwal</h2>
+                        <p class="text-xs text-gray-600 mt-0.5">
+                            {{ $report['imported'] + $report['skipped'] }} baris diproses
+                            (<span class="font-semibold text-green-700">{{ $report['imported'] }} berhasil</span>
+                            @if($hasIssues)
+                                · <span class="font-semibold text-amber-700">{{ $report['skipped'] }} dilewati</span>
+                            @endif
+                            )
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    @if($hasIssues)
+                        <button type="button" @click="open = !open"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            <span x-text="open ? 'Sembunyikan Rincian' : 'Lihat Rincian'"></span>
+                        </button>
+                    @endif
+                    <button type="button" onclick="this.closest('.import-report').remove()"
+                            class="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" title="Tutup">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            @if($hasIssues)
+            <div x-show="open" x-collapse x-cloak class="border-t border-amber-100 bg-white/70 px-5 py-4 space-y-3">
+                @forelse($summary as $key => $cat)
+                    @php
+                        $meta  = $categoryLabels[$key] ?? ['label' => ucfirst((string) $key), 'color' => 'abu'];
+                        $colorKey = $meta['color'] == 'red' ? 'merah' : ($meta['color'] == 'amber' ? 'kuning' : ($meta['color'] == 'orange' ? 'oranye' : 'abu'));
+                        $color = $colorMap[$colorKey];
+                    @endphp
+                    <div class="rounded-xl border p-3.5 {{ $color['bg'] }} {{ $color['border'] }}">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="w-2 h-2 flex-shrink-0 rounded-full {{ $color['badge'] }}"></span>
+                                <span class="text-sm font-semibold {{ $color['text'] }} truncate">{{ $meta['label'] }}</span>
+                            </div>
+                            <span class="flex-shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold {{ $color['badge'] }}">{{ $cat['count'] }} baris</span>
+                        </div>
+                        @if(!empty($cat['examples']))
+                            <ul class="mt-2.5 space-y-1">
+                                @foreach($cat['examples'] as $ex)
+                                    <li class="text-xs text-gray-600 bg-white/60 border border-black/5 rounded-lg px-3 py-1.5">{{ $ex }}</li>
+                                @endforeach
+                            </ul>
+                            @if($cat['count'] > count($cat['examples']))
+                                <p class="mt-2 text-[11px] {{ $color['text'] }} opacity-70">… dan {{ $cat['count'] - count($cat['examples']) }} baris lagi.</p>
+                            @endif
+                        @endif
+                    </div>
+                @empty
+                    <p class="text-xs text-gray-500">Tidak ada masalah.</p>
+                @endforelse
+            </div>
+            @endif
+        </div>
+    @endif
+
     {{-- Import Modal --}}
     <div id="importModalSchedule" class="fixed inset-0 z-[100] hidden overflow-y-auto" aria-labelledby="modal-title-schedule" role="dialog" aria-modal="true">
         <div class="flex items-center justify-center min-h-screen p-4 text-center">

@@ -18,6 +18,34 @@ class SchedulesImport implements ToCollection
     private int $importedCount = 0;
     private int $skippedCount = 0;
     private array $errors = [];
+    // summary[kategori] => ['count' => int, 'examples' => [string, ...]]
+    private array $summary = [];
+
+    private array $categoryLabels = [
+        'duplicate'         => ['label' => 'Duplikat (sudah ada)',   'color' => 'red'],
+        'missing'           => ['label' => 'Baris tidak lengkap',     'color' => 'amber'],
+        'invalid_day'       => ['label' => 'Hari tidak dikenali',     'color' => 'amber'],
+        'invalid_time'      => ['label' => 'Format jam tidak valid',  'color' => 'amber'],
+        'class_not_found'   => ['label' => 'Kelas tidak ditemukan',   'color' => 'orange'],
+        'subject_not_found' => ['label' => 'Mata pelajaran tidak ditemukan', 'color' => 'orange'],
+        'teacher_not_found' => ['label' => 'Guru tidak ditemukan',    'color' => 'orange'],
+    ];
+
+    private function recordError(string $category, string $message): void
+    {
+        $this->skippedCount++;
+        $this->errors[] = $message;
+
+        if (!isset($this->summary[$category])) {
+            $this->summary[$category] = ['count' => 0, 'examples' => []];
+        }
+        $this->summary[$category]['count']++;
+
+        // Simpan contoh maksimal 10 baris agar ringkas
+        if (count($this->summary[$category]['examples']) < 10) {
+            $this->summary[$category]['examples'][] = $message;
+        }
+    }
 
     private array $dayMap = [
         'senin'  => 'Monday',
@@ -105,16 +133,14 @@ class SchedulesImport implements ToCollection
                 if (empty($dayRaw))      $missing[] = 'hari';
                 if (empty($startRaw))    $missing[] = 'jam mulai';
                 if (empty($endRaw))      $missing[] = 'jam selesai';
-                $this->errors[] = 'Baris kosong/tidak lengkap (kurang: ' . implode(', ', $missing) . ')';
-                $this->skippedCount++;
+                $this->recordError('missing', 'Baris kosong/tidak lengkap (kurang: ' . implode(', ', $missing) . ')');
                 continue;
             }
 
             // --- Resolve day ---
             $dayEnglish = $this->dayMap[strtolower($dayRaw)] ?? null;
             if (!$dayEnglish) {
-                $this->errors[] = "Hari tidak dikenali: '{$dayRaw}' (baris dengan kelas {$className})";
-                $this->skippedCount++;
+                $this->recordError('invalid_day', "Hari tidak dikenali: '{$dayRaw}' (baris dengan kelas {$className})");
                 continue;
             }
 
@@ -122,8 +148,7 @@ class SchedulesImport implements ToCollection
             $startTime = $this->parseTime($startRaw);
             $endTime   = $this->parseTime($endRaw);
             if (!$startTime || !$endTime) {
-                $this->errors[] = "Format jam tidak valid: '{$startRaw}' - '{$endRaw}' (kelas {$className}, {$dayRaw})";
-                $this->skippedCount++;
+                $this->recordError('invalid_time', "Format jam tidak valid: '{$startRaw}' - '{$endRaw}' (kelas {$className}, {$dayRaw})");
                 continue;
             }
 
@@ -137,8 +162,7 @@ class SchedulesImport implements ToCollection
                       ->orWhere('name', $className);
                 })->first();
             if (!$class) {
-                $this->errors[] = "Kelas tidak ditemukan: '{$className}'";
-                $this->skippedCount++;
+                $this->recordError('class_not_found', "Kelas tidak ditemukan: '{$className}'");
                 continue;
             }
 
@@ -149,8 +173,7 @@ class SchedulesImport implements ToCollection
                       ->orWhere('name', $subjectName);
                 })->first();
             if (!$subject) {
-                $this->errors[] = "Mata pelajaran tidak ditemukan: '{$subjectName}'";
-                $this->skippedCount++;
+                $this->recordError('subject_not_found', "Mata pelajaran tidak ditemukan: '{$subjectName}'");
                 continue;
             }
 
@@ -169,8 +192,7 @@ class SchedulesImport implements ToCollection
                 $teacher = $subject->teachers()->first();
             }
             if (!$teacher) {
-                $this->errors[] = "Guru tidak ditemukan untuk: '{$subjectName}' (kelas {$className}, {$dayRaw})";
-                $this->skippedCount++;
+                $this->recordError('teacher_not_found', "Guru tidak ditemukan untuk: '{$subjectName}' (kelas {$className}, {$dayRaw})");
                 continue;
             }
 
@@ -201,8 +223,7 @@ class SchedulesImport implements ToCollection
                 ->exists();
 
             if ($exists) {
-                $this->errors[] = "Duplikat: {$class->name}, {$subjectName}, {$dayRaw} {$startTime}-{$endTime}";
-                $this->skippedCount++;
+                $this->recordError('duplicate', "Duplikat: {$class->name}, {$subjectName}, {$dayRaw} {$startTime}-{$endTime}");
                 continue;
             }
 
@@ -244,4 +265,16 @@ class SchedulesImport implements ToCollection
     public function getImportedCount(): int { return $this->importedCount; }
     public function getSkippedCount(): int  { return $this->skippedCount; }
     public function getErrors(): array      { return $this->errors; }
+
+    /**
+     * Ringkasan per kategori masalah, lengkap dengan label & contoh baris.
+     * return array{ categories: array, categoryLabels: array }
+     */
+    public function getSummary(): array
+    {
+        return [
+            'categories'     => $this->summary,
+            'categoryLabels' => $this->categoryLabels,
+        ];
+    }
 }

@@ -29,8 +29,6 @@ class SubjectsImport implements ToCollection
                     if ($v === 'nama' || $v === 'nama mata pelajaran' || $v === 'nama mapel') {
                         $cols['name'] = $i;
                         $isHeader = true;
-                    } elseif (in_array($v, ['kode', 'kode mapel', 'code'])) {
-                        $cols['code'] = $i;
                     } elseif (in_array($v, ['jp', 'jam pelajaran', 'credit_hours', 'jam'])) {
                         $cols['credit_hours'] = $i;
                     } elseif (in_array($v, ['guru', 'guru pengampu', 'teacher', 'pengampu', 'nip guru'])) {
@@ -51,11 +49,6 @@ class SubjectsImport implements ToCollection
                 continue;
             }
 
-            $code = trim((string) ($rowArray[$cols['code'] ?? -1] ?? ''));
-            if (empty($code)) {
-                $code = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $name), 0, 5)) . '-' . rand(100, 999);
-            }
-
             $creditHours = (int) ($rowArray[$cols['credit_hours'] ?? -1] ?? 2);
             if ($creditHours < 1 || $creditHours > 20) {
                 $creditHours = 2;
@@ -66,7 +59,6 @@ class SubjectsImport implements ToCollection
             $subject = Subject::firstOrCreate(
                 ['name' => $name, 'institution_id' => $institutionId],
                 [
-                    'code'         => $code,
                     'credit_hours' => $creditHours,
                     'description'  => $description,
                     'institution_id' => $institutionId,

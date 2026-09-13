@@ -28,7 +28,6 @@ class SubjectsTemplateExport implements FromCollection, WithHeadings, WithTitle,
         $teacher = $subject->teachers->first();
         return [
             $subject->name,
-            $subject->code,
             $subject->credit_hours,
             $teacher ? $teacher->name : '',
             $subject->description ?? '',
@@ -39,7 +38,6 @@ class SubjectsTemplateExport implements FromCollection, WithHeadings, WithTitle,
     {
         return [
             'Nama Mata Pelajaran',
-            'Kode Mapel',
             'JP (Jam Pelajaran)',
             'Guru Pengampu',
             'Deskripsi',

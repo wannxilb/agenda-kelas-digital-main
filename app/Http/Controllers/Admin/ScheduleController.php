@@ -10,6 +10,7 @@ use App\Models\Subject;
 use App\Models\User;
 use App\Models\Room;
 use App\Models\Setting;
+use App\Models\AcademicYear;
 use App\Imports\SchedulesImport;
 use App\Exports\SchedulesTemplateExport;
 use Illuminate\Http\Request;
@@ -32,6 +33,30 @@ class ScheduleController extends Controller
         }
 
         return $rule;
+    }
+
+    // Sama seperti logika di HasAcademicYear::bootHasAcademicYear().
+    // Dipakai untuk mengembalikan scope academic_year pada query cek bentrok
+    // yang memakai withoutGlobalScopes().
+    private function resolveAcademicYearId(Request $request): ?int
+    {
+        $selected = $request->get('academic_year_id') ?: session('academic_year_id');
+        if (is_array($selected)) {
+            $selected = implode(',', $selected);
+        }
+        if (is_string($selected) && str_contains($selected, ',')) {
+            $selected = trim(explode(',', $selected)[0]);
+        }
+        if ($selected && ctype_digit((string) $selected)) {
+            return (int) $selected;
+        }
+
+        $activeQuery = AcademicYear::where('is_active', true);
+        if (auth()->check() && auth()->user()->institution_id) {
+            $activeQuery->where('institution_id', auth()->user()->institution_id);
+        }
+
+        return $activeQuery->value('id');
     }
 
     public function index(Request $request)
@@ -84,6 +109,8 @@ class ScheduleController extends Controller
             return response()->json([]);
         }
 
+        $academicYearId = $this->resolveAcademicYearId($request);
+
         // Ambil ruangan yang BENTROK pada hari dan jam tersebut
         $busyRoomIds = Schedule::where('day', $day)
             ->where(function($q) use ($startTime, $endTime) {
@@ -93,6 +120,11 @@ class ScheduleController extends Controller
                 if ($request->week_type && $request->week_type !== 'semua') {
                     $q->whereIn('week_type', ['semua', $request->week_type]);
                 }
+            })
+            ->where(function($q) use ($academicYearId) {
+                $academicYearId !== null
+                    ? $q->where('academic_year_id', $academicYearId)
+                    : $q->whereNull('academic_year_id');
             })
             ->when($scheduleId, function($q) use ($scheduleId) {
                 $q->where('id', '!=', $scheduleId);
@@ -174,11 +206,18 @@ class ScheduleController extends Controller
         $startTime = strlen($request->start_time) === 5 ? $request->start_time . ':00' : $request->start_time;
         $endTime = strlen($request->end_time) === 5 ? $request->end_time . ':00' : $request->end_time;
 
+        $academicYearId = $this->resolveAcademicYearId($request);
+
         // 1. Cek bentrok kelas
         if (Schedule::withoutGlobalScopes()
             ->where(fn($q) => $q->where('institution_id', $institutionId)->orWhereNull('institution_id'))
             ->where('class_id', $request->class_id)
             ->where('day', $request->day)
+            ->where(function($q) use ($academicYearId) {
+                $academicYearId !== null
+                    ? $q->where('academic_year_id', $academicYearId)
+                    : $q->whereNull('academic_year_id');
+            })
             ->where(function($q) use ($startTime, $endTime) {
                 $q->where('start_time', '<', $endTime)->where('end_time', '>', $startTime);
             })
@@ -195,6 +234,11 @@ class ScheduleController extends Controller
             ->where(fn($q) => $q->where('institution_id', $institutionId)->orWhereNull('institution_id'))
             ->where('teacher_id', $request->teacher_id)
             ->where('day', $request->day)
+            ->where(function($q) use ($academicYearId) {
+                $academicYearId !== null
+                    ? $q->where('academic_year_id', $academicYearId)
+                    : $q->whereNull('academic_year_id');
+            })
             ->where(function($q) use ($startTime, $endTime) {
                 $q->where('start_time', '<', $endTime)->where('end_time', '>', $startTime);
             })
@@ -212,6 +256,11 @@ class ScheduleController extends Controller
                 ->where(fn($q) => $q->where('institution_id', $institutionId)->orWhereNull('institution_id'))
                 ->where('day', $request->day)
                 ->where('room_id', $request->room_id)
+                ->where(function($q) use ($academicYearId) {
+                    $academicYearId !== null
+                        ? $q->where('academic_year_id', $academicYearId)
+                        : $q->whereNull('academic_year_id');
+                })
                 ->where(function($q) use ($startTime, $endTime) {
                     $q->where('start_time', '<', $endTime)->where('end_time', '>', $startTime);
                 })
@@ -303,12 +352,19 @@ class ScheduleController extends Controller
             return redirect()->back()->with('error', 'Jam selesai harus setelah jam mulai!')->withInput();
         }
 
+        $academicYearId = $schedule->academic_year_id;
+
         // 1. Cek bentrok kelas
         if (Schedule::withoutGlobalScopes()
             ->where(fn($q) => $q->where('institution_id', $institutionId)->orWhereNull('institution_id'))
             ->where('class_id', $request->class_id)
             ->where('id', '!=', $schedule->id)
             ->where('day', $request->day)
+            ->where(function($q) use ($academicYearId) {
+                $academicYearId !== null
+                    ? $q->where('academic_year_id', $academicYearId)
+                    : $q->whereNull('academic_year_id');
+            })
             ->where(function($q) use ($startTime, $endTime) {
                 $q->where('start_time', '<', $endTime)->where('end_time', '>', $startTime);
             })
@@ -326,6 +382,11 @@ class ScheduleController extends Controller
             ->where('teacher_id', $request->teacher_id)
             ->where('id', '!=', $schedule->id)
             ->where('day', $request->day)
+            ->where(function($q) use ($academicYearId) {
+                $academicYearId !== null
+                    ? $q->where('academic_year_id', $academicYearId)
+                    : $q->whereNull('academic_year_id');
+            })
             ->where(function($q) use ($startTime, $endTime) {
                 $q->where('start_time', '<', $endTime)->where('end_time', '>', $startTime);
             })
@@ -344,6 +405,11 @@ class ScheduleController extends Controller
                 ->where('id', '!=', $schedule->id)
                 ->where('day', $request->day)
                 ->where('room_id', $request->room_id)
+                ->where(function($q) use ($academicYearId) {
+                    $academicYearId !== null
+                        ? $q->where('academic_year_id', $academicYearId)
+                        : $q->whereNull('academic_year_id');
+                })
                 ->where(function($q) use ($startTime, $endTime) {
                     $q->where('start_time', '<', $endTime)->where('end_time', '>', $startTime);
                 })
@@ -404,22 +470,22 @@ class ScheduleController extends Controller
 
             $imported = $import->getImportedCount();
             $skipped  = $import->getSkippedCount();
-            $errors   = $import->getErrors();
 
-            $detail = '';
-            if ($skipped > 0) {
-                $detail .= " {$skipped} baris dilewati.";
-            }
-            if (!empty($errors)) {
-                $detail .= ' Masalah: ' . implode('; ', array_slice($errors, 0, 5));
-            }
+            $report = [
+                'imported'      => $imported,
+                'skipped'       => $skipped,
+                'summary'       => $import->getSummary(),
+            ];
 
             if ($imported > 0) {
-                return redirect()->back()->with('success', "Berhasil mengimpor {$imported} jadwal." . $detail);
+                return redirect()->back()
+                    ->with('success', "Berhasil mengimpor {$imported} dari " . ($imported + $skipped) . " jadwal.")
+                    ->with('import_report', $report);
             }
 
-            $fallback = "Tidak ada jadwal yang berhasil diimpor." . $detail;
-            return redirect()->back()->with('error', $fallback);
+            return redirect()->back()
+                ->with('error', "Tidak ada jadwal yang berhasil diimpor dari " . ($imported + $skipped) . " baris.")
+                ->with('import_report', $report);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal import jadwal: ' . $e->getMessage());
         }

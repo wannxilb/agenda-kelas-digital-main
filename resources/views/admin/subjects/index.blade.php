@@ -106,7 +106,7 @@
                     </svg>
                 </div>
                 <input type="text" name="search" value="{{ request('search') }}" 
-                       placeholder="Cari kode atau nama mata pelajaran..." 
+                       placeholder="Cari nama mata pelajaran..." 
                        class="block w-full pl-12 pr-4 py-3.5 bg-gray-50 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm">
             </div>
 

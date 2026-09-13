@@ -20,11 +20,13 @@ class TeachersTemplateExport implements FromCollection, WithHeadings, WithTitle,
     {
         return [
             $teacher->name,
-            $teacher->email,
             $teacher->nip,
             $teacher->phone,
             $teacher->address,
-            '', // Password blank for template/security
+            $teacher->email,
+            '', // Gelar Depan (tidak disimpan terpisah di DB)
+            '', // Gelar Belakang (tidak disimpan terpisah di DB)
+            $teacher->subjects->pluck('name')->implode(', '),
         ];
     }
 
@@ -32,11 +34,13 @@ class TeachersTemplateExport implements FromCollection, WithHeadings, WithTitle,
     {
         return [
             'Nama',
-            'Email',
             'NIP',
             'Telepon',
             'Alamat',
-            'Password'
+            'Email',
+            'Gelar Depan',
+            'Gelar Belakang',
+            'Mengajar'
         ];
     }
 
