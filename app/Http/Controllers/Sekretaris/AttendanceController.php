@@ -30,6 +30,10 @@ class AttendanceController extends Controller
             return redirect()->route('sekretaris.dashboard')->with('error', 'Data kelas Anda tidak ditemukan dalam sistem. Mohon hubungi Admin untuk memastikan pendaftaran kelas Anda sudah benar.');
         }
 
+        if (!$context['isActivePeriod']) {
+            return redirect()->route('sekretaris.attendance.report', ['class_id' => $classId]);
+        }
+
         $classes = collect([$class]);
         $selectedClassId = $classId;
         $date = $request->date ?? date('Y-m-d');
@@ -62,6 +66,10 @@ class AttendanceController extends Controller
         $classId = $context['selectedClassId'];
         if (!$classId) {
             return redirect()->back()->with('error', 'Anda belum terdaftar di kelas manapun.');
+        }
+
+        if (!$context['isActivePeriod']) {
+            return redirect()->back()->with('error', 'Kelas yang dipilih hanya untuk melihat data (read only). Presensi tidak dapat disimpan.');
         }
 
         $request->validate([

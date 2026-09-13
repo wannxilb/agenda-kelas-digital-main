@@ -21,16 +21,25 @@
                     Kelola daftar agenda harian, ringkasan materi, dan tugas kelas.
                 </p>
             </div>
+            @if($isActivePeriod ?? false)
             <a href="{{ route('sekretaris.agenda.create', array_filter(['class_id' => $selectedClassId ?? null])) }}"
                class="hidden sm:inline-flex shrink-0 items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-linear-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg shadow-blue-500/20 hover:from-blue-700 hover:to-indigo-700 active:scale-95 transition-all uppercase tracking-widest">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                 Buat Agenda
             </a>
+            @endif
         </div>
 
         <div class="mb-3">
             @include('sekretaris.partials.class-filter')
         </div>
+
+        @unless($isActivePeriod ?? false)
+            <div class="mb-3 flex items-center gap-2.5 px-3.5 py-3 bg-sky-50 border border-sky-200 rounded-2xl text-[11px] sm:text-xs font-semibold text-sky-700">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                Mode lihat: kelas ini hanya untuk melihat data agenda. Tidak dapat menambah atau mengubah agenda.
+            </div>
+        @endunless
 
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sm:overflow-visible">
             <form method="GET" action="{{ route('sekretaris.agenda.index') }}" id="filterForm" x-ref="filterForm" class="sm:relative">
@@ -319,11 +328,13 @@
 </div>
 
 {{-- Floating Action Button (mobile only) --}}
+@if($isActivePeriod ?? false)
 <a href="{{ route('sekretaris.agenda.create', array_filter(['class_id' => $selectedClassId ?? null])) }}"
    class="sm:hidden fixed bottom-24 right-5 z-40 w-14 h-14 flex items-center justify-center bg-linear-to-br from-blue-600 to-indigo-600 text-white rounded-2xl shadow-xl shadow-blue-500/30 active:scale-90 transition-transform"
    aria-label="Buat Agenda">
     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
 </a>
+@endif
 
 {{-- Scroll to top button --}}
 <button x-data="{ show: false }"

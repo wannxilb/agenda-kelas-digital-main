@@ -41,8 +41,6 @@
         </p>
     </div>
 
-    @include('sekretaris.partials.class-filter')
-
     {{-- Date & Class Selector Card --}}
     <form method="GET" action="{{ route('sekretaris.attendance.index') }}" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="p-4 sm:p-5">

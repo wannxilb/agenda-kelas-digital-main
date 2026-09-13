@@ -100,6 +100,11 @@ class AgendaController extends Controller
             return redirect()->route('sekretaris.dashboard')->with('error', 'Anda belum terdaftar di kelas manapun.');
         }
 
+        if (! $context['isActivePeriod']) {
+            return redirect()->route('sekretaris.agenda.index', ['class_id' => $classId])
+                ->with('error', 'Kelas yang dipilih hanya untuk melihat data (read only). Tidak dapat menambah agenda.');
+        }
+
         $classes = Classes::where('id', $classId)->get();
         $today = Carbon::today()->format('l');
         $todayDate = Carbon::today();
@@ -279,6 +284,12 @@ class AgendaController extends Controller
             return redirect()->route('sekretaris.dashboard')->with('error', 'Data kelas tidak ditemukan.');
         }
 
+        if (! $context['isActivePeriod']) {
+            return redirect()->back()
+                ->with('error', 'Kelas yang dipilih hanya untuk melihat data (read only). Agenda tidak dapat diisi.')
+                ->withInput();
+        }
+
         $institutionId = Auth::user()->institution_id;
         $subjectExistsRule = Rule::exists('subjects', 'id');
         $teacherExistsRule = Rule::exists('users', 'id');
@@ -370,11 +381,9 @@ class AgendaController extends Controller
 
     public function edit(Agenda $agenda)
     {
-        $context = $this->sekretarisClassContext(request());
-        $classIds = $context['availableClasses']->pluck('id')->map(fn ($id) => (int) $id)->all();
-
-        if (! in_array((int) $agenda->class_id, $classIds)) {
-            abort(403, 'Unauthorized action.');
+        $user = Auth::user();
+        if (! $user->class_id || (int) $agenda->class_id !== (int) $user->class_id) {
+            abort(403, 'Agenda kelas ini hanya untuk dilihat (read only).');
         }
 
         $classId = (int) $agenda->class_id;
@@ -445,11 +454,9 @@ class AgendaController extends Controller
 
     public function update(Request $request, Agenda $agenda)
     {
-        $context = $this->sekretarisClassContext($request);
-        $classIds = $context['availableClasses']->pluck('id')->map(fn ($id) => (int) $id)->all();
-
-        if (! in_array((int) $agenda->class_id, $classIds)) {
-            abort(403);
+        $user = Auth::user();
+        if (! $user->class_id || (int) $agenda->class_id !== (int) $user->class_id) {
+            abort(403, 'Agenda kelas ini hanya untuk dilihat (read only).');
         }
 
         $classId = (int) $agenda->class_id;
@@ -537,11 +544,9 @@ class AgendaController extends Controller
 
     public function destroy(Agenda $agenda)
     {
-        $context = $this->sekretarisClassContext(request());
-        $classIds = $context['availableClasses']->pluck('id')->map(fn ($id) => (int) $id)->all();
-
-        if (! in_array((int) $agenda->class_id, $classIds)) {
-            abort(403);
+        $user = Auth::user();
+        if (! $user->class_id || (int) $agenda->class_id !== (int) $user->class_id) {
+            abort(403, 'Agenda kelas ini hanya untuk dilihat (read only).');
         }
 
         if ($agenda->attachments) {
@@ -568,6 +573,8 @@ class AgendaController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
+        $isEditable = $user->class_id && (int) $agenda->class_id === (int) $user->class_id;
+
         return response()->json([
             'title' => $agenda->title,
             'description' => trim(strip_tags((string) $agenda->description)),
@@ -578,7 +585,7 @@ class AgendaController extends Controller
             'room' => $agenda->room,
             'attachments' => $agenda->attachments ? asset('storage/'.$agenda->attachments) : null,
             'status' => $agenda->status,
-            'edit_url' => route('sekretaris.agenda.edit', $agenda->id),
+            'edit_url' => $isEditable ? route('sekretaris.agenda.edit', $agenda->id) : null,
         ]);
     }
 
