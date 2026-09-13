@@ -88,17 +88,26 @@
 
             <div x-show="error" x-cloak class="mt-3 rounded-2xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700" x-text="error"></div>
 
-            <div class="mt-3 grid grid-cols-2 gap-2">
-                <button type="button" @click="startCamera()" x-show="!cameraReady && !photoData" class="col-span-2 rounded-2xl {{ $buttonClass }} px-4 py-3 text-sm font-black active:scale-[0.98]">
+            <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+                <button type="button" @click="startCamera()" x-show="!cameraReady && !photoData" class="min-h-11 w-full rounded-2xl {{ $buttonClass }} px-4 py-3 text-sm font-black active:scale-[0.98]">
                     Buka Kamera
                 </button>
-                <button type="button" @click="capture()" x-show="cameraReady && !photoData" class="rounded-2xl {{ $buttonClass }} px-4 py-3 text-sm font-black active:scale-[0.98]">
+                <button type="button" @click="capture()" x-show="cameraReady && !photoData" class="min-h-11 w-full rounded-2xl {{ $buttonClass }} px-4 py-3 text-sm font-black active:scale-[0.98]">
                     {{ $captureLabel }}
                 </button>
-                <button type="button" @click="retake()" x-show="photoData" class="rounded-2xl {{ $softClass }} px-4 py-3 text-sm font-black active:scale-[0.98]">
+                <button type="button" @click="retake()" x-show="photoData" x-cloak
+                        class="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-2xl sm:w-auto {{ $softClass }} px-4 py-3 text-sm font-black active:scale-[0.98]">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+                    </svg>
                     Ulangi
                 </button>
-                <button type="submit" :disabled="!photoData || submitting" class="rounded-2xl {{ $buttonClass }} px-4 py-3 text-sm font-black disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none active:scale-[0.98]">
+                <button type="submit" x-show="photoData" x-cloak :disabled="submitting"
+                        class="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-2xl sm:w-auto {{ $buttonClass }} px-4 py-3 text-sm font-black disabled:cursor-wait disabled:opacity-70 active:scale-[0.98]">
+                    <span x-show="submitting" class="h-4 w-4 animate-spin rounded-full border-2 border-white/80 border-t-transparent"></span>
+                    <svg x-show="!submitting" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 6l2.788 13.029a.5.5 0 01-.932.408l-4.722-7.422a.5.5 0 00-.94.212l-.597 2.985a.5.5 0 01-.972.007l-.808-4.367a.5.5 0 00-.965-.005L7.04 13.4a.5.5 0 01-.968.02L6.4 8.72a.5.5 0 01.495-.56L16 6z"></path>
+                    </svg>
                     {{ $primaryLabel }}
                 </button>
             </div>
