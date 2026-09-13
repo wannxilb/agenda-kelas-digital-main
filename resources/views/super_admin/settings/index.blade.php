@@ -52,7 +52,7 @@
 
         {{-- Sidebar Navigation --}}
         <div class="w-full lg:w-64 shrink-0">
-            <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 sticky top-28">
+            <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-4">
                 <nav class="space-y-1">
                     @php
                         $tabs = [
@@ -65,6 +65,7 @@
                             'maintenance'    => ['label' => __('Maintenance'),    'icon' => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z'],
                             'backup'         => ['label' => __('Backup & Restore'),'icon' => 'M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4'],
                             'audit'          => ['label' => __('Audit Log'),      'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01'],
+                            'presensi'       => ['label' => __('Presensi'),        'icon' => 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'],
                             'about'          => ['label' => __('Tentang Sistem'), 'icon' => 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
                         ];
                     @endphp
@@ -571,6 +572,69 @@
                             <button type="submit" class="px-6 py-3 bg-purple-600 text-white font-bold rounded-2xl shadow-lg shadow-purple-500/20 hover:bg-purple-700 transition-all">Simpan Perubahan</button>
                         </div>
                     </form>
+                </div>
+            </div>
+
+            {{-- ═══════════════════════════════════════════ --}}
+            {{-- TAB: Presensi (Foto Kehadiran) --}}
+            {{-- ═══════════════════════════════════════════ --}}
+            <div x-show="activeTab === 'presensi'" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+                <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+                    <h2 class="text-lg font-black text-gray-900 mb-1">Pengaturan Foto Kehadiran</h2>
+                    <p class="text-sm text-gray-500 mb-8">Kelola masa simpan foto check-in/out dan pantau penggunaan storage.</p>
+
+                    <form action="{{ route('super-admin.settings.update') }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="_tab" value="presensi">
+                        <div class="space-y-6">
+                            <h3 class="text-sm font-bold text-gray-700 mb-4">Retensi Foto</h3>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Masa Simpan Foto Kehadiran</label>
+                                <div class="flex items-center gap-3">
+                                    <input type="number" name="attendance_photo_retention_days" value="{{ $settings['attendance_photo_retention_days'] ?? '30' }}" min="1" max="3650" required class="w-full md:w-48 bg-gray-50 border-transparent rounded-2xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-purple-500 transition-all">
+                                    <span class="text-sm text-gray-400">hari</span>
+                                </div>
+                                <p class="text-xs text-gray-400 mt-1">Foto yang lebih lama dari ini dihapus otomatis setiap bulan oleh scheduler. Baris data presensinya tetap disimpan.</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-end mt-8 pt-6 border-t border-gray-100">
+                            <button type="submit" class="px-6 py-3 bg-purple-600 text-white font-bold rounded-2xl shadow-lg shadow-purple-500/20 hover:bg-purple-700 transition-all">Simpan Perubahan</button>
+                        </div>
+                    </form>
+
+                    <div class="mt-8 pt-6 border-t border-gray-100">
+                        <h3 class="text-sm font-bold text-gray-700 mb-4">Statistik Storage Foto Presensi</h3>
+                        @php
+                            $totalPhotos = ($mediaStats['check_in'] ?? 0) + ($mediaStats['check_out'] ?? 0) + ($mediaStats['corrections'] ?? 0);
+                            $bytes = $mediaStats['bytes'] ?? 0;
+                            $sizeLabel = $bytes >= 1073741824
+                                ? number_format($bytes / 1073741824, 2) . ' GB'
+                                : ($bytes >= 1048576 ? number_format($bytes / 1048576, 2) . ' MB' : number_format($bytes / 1024, 1) . ' KB');
+                        @endphp
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="p-5 bg-emerald-50 rounded-2xl border border-emerald-100">
+                                <p class="text-[10px] font-black text-emerald-600/70 uppercase tracking-widest">Check-in</p>
+                                <p class="text-2xl font-black text-emerald-700 mt-1">{{ number_format($mediaStats['check_in'] ?? 0) }}</p>
+                                <p class="text-[10px] text-emerald-500 mt-0.5">foto tersimpan</p>
+                            </div>
+                            <div class="p-5 bg-sky-50 rounded-2xl border border-sky-100">
+                                <p class="text-[10px] font-black text-sky-600/70 uppercase tracking-widest">Check-out</p>
+                                <p class="text-2xl font-black text-sky-700 mt-1">{{ number_format($mediaStats['check_out'] ?? 0) }}</p>
+                                <p class="text-[10px] text-sky-500 mt-0.5">foto tersimpan</p>
+                            </div>
+                            <div class="p-5 bg-amber-50 rounded-2xl border border-amber-100">
+                                <p class="text-[10px] font-black text-amber-600/70 uppercase tracking-widest">Bukti Koreksi</p>
+                                <p class="text-2xl font-black text-amber-700 mt-1">{{ number_format($mediaStats['corrections'] ?? 0) }}</p>
+                                <p class="text-[10px] text-amber-500 mt-0.5">foto tersimpan</p>
+                            </div>
+                            <div class="p-5 bg-purple-50 rounded-2xl border border-purple-100">
+                                <p class="text-[10px] font-black text-purple-600/70 uppercase tracking-widest">Storage</p>
+                                <p class="text-lg font-black text-purple-700 mt-1">{{ $sizeLabel }}</p>
+                                <p class="text-[10px] text-purple-500 mt-0.5">{{ number_format($totalPhotos) }} file</p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-3">Perkiraan penggunaan berdasarkan ukuran file yang tersimpan di private storage. Diperbarui otomatis (cache ±10 menit).</p>
+                    </div>
                 </div>
             </div>
 

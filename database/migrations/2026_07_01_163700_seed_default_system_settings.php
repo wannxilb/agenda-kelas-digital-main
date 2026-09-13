@@ -72,6 +72,9 @@ return new class extends Migration
             ['key' => 'audit_log_login',      'value' => '1',   'group' => 'audit'],
             ['key' => 'audit_log_crud',       'value' => '1',   'group' => 'audit'],
             ['key' => 'audit_log_error',      'value' => '1',   'group' => 'audit'],
+
+            // Attendance
+            ['key' => 'attendance_photo_retention_days', 'value' => '30', 'group' => 'attendance'],
         ];
 
         foreach ($defaults as $setting) {

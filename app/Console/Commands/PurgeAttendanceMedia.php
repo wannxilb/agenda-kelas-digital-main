@@ -4,18 +4,23 @@ namespace App\Console\Commands;
 
 use App\Models\StudentDailyAttendance;
 use App\Models\StudentDailyAttendanceCorrection;
+use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 
 class PurgeAttendanceMedia extends Command
 {
-    protected $signature = 'attendance:purge-media {--days=365 : Masa simpan media dalam hari}';
+    protected $signature = 'attendance:purge-media {--days= : Masa simpan media dalam hari (default: setting attendance_photo_retention_days)}';
     protected $description = 'Delete old attendance photos and correction evidence while preserving attendance records';
 
     public function handle(): int
     {
-        $cutoff = Carbon::now()->subDays((int) $this->option('days'));
+        $rawDays = $this->option('days');
+        $days = $rawDays !== null && $rawDays !== '' ? (int) $rawDays : (int) Setting::get('attendance_photo_retention_days', 30);
+        $days = max(1, $days);
+
+        $cutoff = Carbon::now()->subDays($days);
         $deleted = 0;
 
         StudentDailyAttendance::withoutGlobalScopes()
@@ -44,7 +49,7 @@ class PurgeAttendanceMedia extends Command
                 }
             });
 
-        $this->info("{$deleted} media lama dihapus. Data absensi dan audit tetap dipertahankan.");
+        $this->info("{$deleted} media lama dihapus. Data absensi dan audit tetap dipertahankan. (retensi {$days} hari)");
         return self::SUCCESS;
     }
 }

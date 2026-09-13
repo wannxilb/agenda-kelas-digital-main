@@ -4,11 +4,15 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Models\StudentDailyAttendance;
+use App\Models\StudentDailyAttendanceCorrection;
 use App\Services\AuditLogger;
 use App\Services\FeatureService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class SettingController extends Controller
 {
@@ -30,7 +34,24 @@ class SettingController extends Controller
             'server_os' => php_uname('s') . ' ' . php_uname('r'),
         ];
 
-        return view('super_admin.settings.index', compact('settings', 'tab', 'systemInfo'));
+        // Statistics for attendance photo storage (counts are DB-driven & fast;
+        // disk size is measured once and cached to avoid blocking the page).
+        $mediaStats = [
+            'check_in' => StudentDailyAttendance::withoutGlobalScopes()->whereNotNull('check_in_photo')->count(),
+            'check_out' => StudentDailyAttendance::withoutGlobalScopes()->whereNotNull('check_out_photo')->count(),
+            'corrections' => StudentDailyAttendanceCorrection::withoutGlobalScopes()->whereNotNull('evidence_path')->count(),
+            'bytes' => Cache::remember('attendance-media-bytes:v1', 600, function () {
+                $bytes = 0;
+                foreach (['student-attendances', 'correction-evidence'] as $directory) {
+                    foreach (Storage::disk('local')->allFiles($directory) as $file) {
+                        $bytes += (int) Storage::disk('local')->size($file);
+                    }
+                }
+                return $bytes;
+            }),
+        ];
+
+        return view('super_admin.settings.index', compact('settings', 'tab', 'systemInfo', 'mediaStats'));
     }
 
     /**
