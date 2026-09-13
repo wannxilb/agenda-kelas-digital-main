@@ -14,6 +14,14 @@ class DailyAttendanceSettingController extends Controller
     public function edit()
     {
         $setting = DailyAttendanceSetting::forInstitution(Auth::user()->institution_id);
+
+        $setting->check_in_message_template = $setting->check_in_message_template
+            ?: 'Ananda {student} telah masuk sekolah pukul {time}. Status: {status}.';
+        $setting->check_out_message_template = $setting->check_out_message_template
+            ?: 'Ananda {student} telah pulang sekolah pukul {time}. Status: {status}.';
+        $setting->absent_message_template = $setting->absent_message_template
+            ?: 'Ananda {student} ({class}) tidak tercatat hadir di sekolah hari ini, {date}. Jika anak berhalangan, mohon sampaikan keterangan ke wali kelas.';
+
         $health = app(WhatsappNotificationHealth::class)->overview(Auth::user()->institution_id);
 
         return view('admin.daily-attendance.settings', compact('setting', 'health'));
@@ -38,6 +46,7 @@ class DailyAttendanceSettingController extends Controller
             'whatsapp_country_code' => ['nullable', 'string', 'max:5'],
             'check_in_message_template' => ['nullable', 'string', 'max:1000'],
             'check_out_message_template' => ['nullable', 'string', 'max:1000'],
+            'absent_message_template' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $setting = DailyAttendanceSetting::forInstitution(Auth::user()->institution_id);
@@ -58,6 +67,7 @@ class DailyAttendanceSettingController extends Controller
             'whatsapp_country_code' => $validated['whatsapp_country_code'] ?? '62',
             'check_in_message_template' => $validated['check_in_message_template'] ?? null,
             'check_out_message_template' => $validated['check_out_message_template'] ?? null,
+            'absent_message_template' => $validated['absent_message_template'] ?? null,
         ]);
 
         return redirect()->back()->with('success', 'Pengaturan absensi harian berhasil disimpan.');

@@ -37,6 +37,7 @@ class DailyAttendanceSetting extends Model
         'whatsapp_country_code',
         'check_in_message_template',
         'check_out_message_template',
+        'absent_message_template',
     ];
 
     protected $casts = [
@@ -69,6 +70,7 @@ class DailyAttendanceSetting extends Model
                         'whatsapp_country_code' => '62',
                         'check_in_message_template' => 'Ananda {student} telah masuk sekolah pukul {time}. Status: {status}.',
                         'check_out_message_template' => 'Ananda {student} telah pulang sekolah pukul {time}. Status: {status}.',
+                        'absent_message_template' => 'Ananda {student} ({class}) tidak tercatat hadir di sekolah hari ini, {date}. Jika anak berhalangan, mohon sampaikan keterangan ke wali kelas.',
                     ]
                 );
             }

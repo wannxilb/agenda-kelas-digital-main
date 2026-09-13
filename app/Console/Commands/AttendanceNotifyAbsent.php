@@ -59,6 +59,8 @@ class AttendanceNotifyAbsent extends Command
 
     private function notifyInstitution(int $institutionId, string $today): int
     {
+        $setting = DailyAttendanceSetting::forInstitution($institutionId);
+
         $coveredStudentIds = StudentEarlyLeaveRequest::where('institution_id', $institutionId)
             ->where('status', 'pending')
             ->where('date', '<=', $today)
@@ -98,11 +100,14 @@ class AttendanceNotifyAbsent extends Command
                 continue;
             }
 
-            $message = sprintf(
-                'Ananda %s (%s) tidak tercatat hadir di sekolah hari ini, %s. Jika anak berhalangan, mohon sampaikan keterangan ke wali kelas.',
-                $student->name,
-                $student->class?->name ?? '-',
-                Carbon::parse($today)->translatedFormat('d M Y')
+            $message = strtr(
+                $setting->absent_message_template
+                    ?: 'Ananda {student} ({class}) tidak tercatat hadir di sekolah hari ini, {date}. Jika anak berhalangan, mohon sampaikan keterangan ke wali kelas.',
+                [
+                    '{student}' => $student->name,
+                    '{class}' => $student->class?->name ?? '-',
+                    '{date}' => Carbon::parse($today)->translatedFormat('d M Y'),
+                ]
             );
 
             $log = WhatsappNotificationLog::create([

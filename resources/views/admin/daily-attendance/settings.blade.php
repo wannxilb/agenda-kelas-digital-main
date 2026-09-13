@@ -55,7 +55,7 @@
         </div>
     </section>
 
-    <form method="POST" action="{{ route('admin.daily-attendance.settings.update') }}" class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+    <form method="POST" action="{{ route('admin.daily-attendance.settings.update') }}" class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden" x-data="{ mode: @js(old('whatsapp_mode', $setting->whatsapp_mode)) }">
         @csrf
         @method('PUT')
 
@@ -157,7 +157,7 @@
 
         <div class="border-t border-gray-100 p-5 sm:p-6">
             <label class="block mb-1.5 text-xs font-bold text-gray-500 uppercase tracking-wider">Mode Notifikasi WhatsApp</label>
-            <select name="whatsapp_mode" class="w-full sm:w-72 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm transition-all hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+            <select name="whatsapp_mode" x-model="mode" class="w-full sm:w-72 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm transition-all hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                 <option value="lengkap" @selected(old('whatsapp_mode', $setting->whatsapp_mode) === 'lengkap')>Lengkap</option>
                 <option value="hemat" @selected(old('whatsapp_mode', $setting->whatsapp_mode) === 'hemat')>Hemat</option>
                 <option value="hanya_absen" @selected(old('whatsapp_mode', $setting->whatsapp_mode) === 'hanya_absen')>Hanya Absen</option>
@@ -182,16 +182,23 @@
         </div>
 
         <div class="border-t border-gray-100 p-5 sm:p-6 space-y-4">
-            <div>
+            <div x-show="mode !== 'hanya_absen'">
                 <label class="block mb-1.5 text-xs font-bold text-gray-500 uppercase tracking-wider">Template WhatsApp Masuk</label>
                 <textarea name="check_in_message_template" rows="3"
                           class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm transition-all hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">{{ old('check_in_message_template', $setting->check_in_message_template) }}</textarea>
+                <p class="mt-2 text-xs text-gray-400">Variabel: {student}, {class}, {date}, {time}, {status}</p>
             </div>
-            <div>
+            <div x-show="mode !== 'hanya_absen'">
                 <label class="block mb-1.5 text-xs font-bold text-gray-500 uppercase tracking-wider">Template WhatsApp Pulang</label>
                 <textarea name="check_out_message_template" rows="3"
                           class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm transition-all hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">{{ old('check_out_message_template', $setting->check_out_message_template) }}</textarea>
                 <p class="mt-2 text-xs text-gray-400">Variabel: {student}, {class}, {date}, {time}, {status}</p>
+            </div>
+            <div x-show="mode === 'hanya_absen'">
+                <label class="block mb-1.5 text-xs font-bold text-gray-500 uppercase tracking-wider">Template WhatsApp Tidak Hadir</label>
+                <textarea name="absent_message_template" rows="3"
+                          class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm transition-all hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">{{ old('absent_message_template', $setting->absent_message_template) }}</textarea>
+                <p class="mt-2 text-xs text-gray-400">Variabel: {student}, {class}, {date}</p>
             </div>
         </div>
 
